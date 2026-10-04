@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
-export declare const connectRedis: () => Promise<Redis>;
+export declare const isRedisConnected: () => boolean;
+export declare const connectRedis: () => Promise<Redis | null>;
 export declare const getRedis: () => Redis;
 export declare const cache: {
     get: <T>(key: string) => Promise<T | null>;

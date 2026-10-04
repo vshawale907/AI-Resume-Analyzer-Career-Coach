@@ -102,22 +102,22 @@ const errorHandler = (err, req, res, _next) => {
         });
         return;
     }
-    // Python NLP service connection errors
-    if (err.code === 'ECONNREFUSED' ||
-        err.message?.includes('ECONNREFUSED') || err.message?.includes('fetch failed')) {
-        res.status(502).json({
+    // Redis connection errors
+    if (err.message?.includes('Redis') || err.message?.includes('ETIMEDOUT')) {
+        res.status(503).json({
             success: false,
-            message: 'NLP service is unavailable. Analysis will use AI fallback.',
-            code: 'NLP_UNAVAILABLE',
+            message: 'Caching service is temporarily unavailable. Core features should still work.',
+            code: 'REDIS_ERROR',
         });
         return;
     }
     // Generic 500
     res.status(500).json({
         success: false,
-        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong. Please try again.',
+        // TEMPORARILY EXPOSING THIS FOR DIAGNOSTICS - REVERT ONCE THE BUG IS FOUND
+        message: err.message || 'Something went wrong. Please try again.',
         code: 'INTERNAL_ERROR',
-        ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
     });
 };
 exports.errorHandler = errorHandler;

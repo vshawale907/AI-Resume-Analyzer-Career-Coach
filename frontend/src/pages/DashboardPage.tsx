@@ -13,7 +13,6 @@ import { api } from '../lib/api';
 import { useAuthStore } from '../stores/authStore';
 import { useResumeStore } from '../stores/resumeStore';
 
-// === TypeScript Interfaces ===
 interface DashboardStats {
     totalResumes: number;
     newResumesThisMonth: number;
@@ -59,7 +58,6 @@ interface ActivityItem {
     timestamp: string;
 }
 
-// === Counter Animation Hook ===
 const AnimatedNumber = ({ value }: { value: number }) => {
     const [count, setCount] = useState(0);
 
@@ -87,7 +85,6 @@ const AnimatedNumber = ({ value }: { value: number }) => {
     return <>{count}</>;
 };
 
-// === Custom Tooltip ===
 const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload?.length) {
         return (
@@ -101,7 +98,6 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return null;
 };
 
-// === Skeleton Loader ===
 const Skeleton = ({ className }: { className?: string }) => (
     <div className={`bg-gray-800/40 animate-pulse rounded-2xl ${className}`} />
 );
@@ -156,7 +152,6 @@ export default function DashboardPage() {
                 })
             );
 
-            // --- Compute Stats ---
             const now = new Date();
             const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -222,7 +217,6 @@ export default function DashboardPage() {
                 latestScore, latestScoreDelta, latestScoreDaysAgo
             });
 
-            // --- Compute Score History ---
             const historyObj = validAnalyses.map(d => ({
                 date: new Date(d.analysis.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
                 atsScore: d.analysis.openAIResult?.atsScore || 0,
@@ -231,7 +225,6 @@ export default function DashboardPage() {
             if (historyObj.length === 1) historyObj.unshift({ date: 'Start', atsScore: 0, qualityScore: 0 });
             setScoreHistory(historyObj);
 
-            // --- Compute Resume Versions ---
             const vList: ResumeVersion[] = validAnalyses.slice(-4).map((d, i) => ({
                 label: d.resume.title || d.resume.originalFilename || `Version ${i + 1}`,
                 atsScore: d.analysis.openAIResult?.atsScore || 0,
@@ -241,7 +234,6 @@ export default function DashboardPage() {
             vList.forEach(v => { if (v.atsScore === maxScore && maxScore > 0) v.isBest = true; });
             setVersions(vList);
 
-            // --- Skills & Missing Skills ---
             const allMatched: Record<string, number> = {};
             const allMissing: Record<string, number> = {};
             
@@ -258,7 +250,6 @@ export default function DashboardPage() {
             setMatchedSkills(sortedMatched.length > 0 ? sortedMatched : ['React', 'TypeScript', 'Node.js', 'MongoDB', 'AWS', 'Docker']);
             setMissingSkills(sortedMissing.length > 0 ? sortedMissing : ['Kubernetes', 'Terraform', 'GraphQL', 'Rust', 'MLOps', 'Kafka']);
 
-            // --- Skill Frequency ---
             const totalAnalyzed = Math.max(validAnalyses.length, 1);
             const freqList: SkillFrequency[] = Object.entries(allMatched).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([skill, count]) => ({
                 skill, count, pct: Math.round((count / totalAnalyzed) * 100)
@@ -271,7 +262,6 @@ export default function DashboardPage() {
                 { skill: 'AWS', count: 1, pct: 30 },
             ]);
 
-            // --- Activity Feed ---
             const feats: ActivityItem[] = [];
             validAnalyses.forEach(d => {
                 feats.push({ 

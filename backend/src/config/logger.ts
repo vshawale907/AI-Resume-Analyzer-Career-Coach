@@ -19,7 +19,7 @@ const transports: winston.transport[] = [
             errors({ stack: true }),
             logFormat
         ),
-        silent: config.NODE_ENV === 'production',
+        silent: config.NODE_ENV === 'test',
     }),
 
     // Daily rotating error log

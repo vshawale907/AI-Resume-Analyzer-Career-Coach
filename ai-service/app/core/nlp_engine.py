@@ -14,7 +14,6 @@ try:
 except LookupError:
     logger.error("NLTK data not found in NLTK_DATA path. Ensure it is downloaded in the Dockerfile.")
 
-# ─── Skill Dictionaries ────────────────────────────────────────────────────
 TECH_SKILLS = {
     # Languages
     "python", "javascript", "typescript", "java", "c++", "c#", "go", "rust", "ruby",
@@ -75,7 +74,6 @@ SKILL_ALIASES = {
     "user experience": ["ux"],
 }
 
-# ─── NLP Engine (Singleton) ───────────────────────────────────────────────
 class NLPEngine:
     _instance: Optional["NLPEngine"] = None
 
@@ -102,7 +100,6 @@ class NLPEngine:
             cls._instance = cls()
         return cls._instance
 
-    # ─── Text Cleaning ───────────────────────────────────────────────────
     def clean_text(self, text: str) -> str:
         # Normalize unicode
         text = unicodedata.normalize("NFKD", text)
@@ -128,7 +125,6 @@ class NLPEngine:
         text = re.sub(r"\s+", " ", text).strip()
         return text
 
-    # ─── Skill Extraction ────────────────────────────────────────────────
     def extract_skills(self, text: str) -> tuple[list[str], list[str]]:
         text_lower = text.lower()
         def is_match(skill):
@@ -149,7 +145,6 @@ class NLPEngine:
         soft = sorted([s for s in SOFT_SKILLS if is_match(s)])
         return tech, soft
 
-    # ─── Experience Year Detection ───────────────────────────────────────
     def extract_experience_years(self, text: str) -> int:
         patterns = [
             r"(\d+)\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:experience|exp|work)",
@@ -197,7 +192,6 @@ class NLPEngine:
 
         return min(total, 40) if total > 0 else 0
 
-    # ─── TF-IDF Cosine Similarity ────────────────────────────────────────
     def compute_similarity(self, resume_text: str, job_text: str) -> float:
         if not job_text.strip():
             return 0.0
@@ -210,7 +204,6 @@ class NLPEngine:
             logger.warning(f"Similarity computation failed: {e}")
             return 0.0
 
-    # ─── Keyword Density ─────────────────────────────────────────────────
     def keyword_density(self, text: str, top_n: int = 20) -> dict[str, float]:
         cleaned = self.clean_text(text)
         tokens = re.findall(r"\b[a-z][a-z+#.]{2,}\b", cleaned)
@@ -228,13 +221,11 @@ class NLPEngine:
         top = counter.most_common(top_n)
         return {word: round(count / total * 100, 2) for word, count in top}
 
-    # ─── Action Verb Detection ───────────────────────────────────────────
     def detect_action_verbs(self, text: str) -> list[str]:
         text_lower = text.lower()
         found = [v for v in ACTION_VERBS if re.search(rf"\b{v}\b", text_lower)]
         return sorted(found)
 
-    # ─── Named Entity Recognition ────────────────────────────────────────
     def extract_entities(self, text: str) -> dict[str, list[str]]:
         # Process max 100k chars for performance
         doc = self.nlp(text[:100_000])
@@ -248,7 +239,6 @@ class NLPEngine:
                     seen.add(norm)
         return entities
 
-    # ─── Quantification Analysis ─────────────────────────────────────────
     def calculate_quantification(self, text: str) -> tuple[float, int]:
         # Identify bullet points or lines that look like achievements
         lines = [l.strip() for l in text.split('\n') if len(l.strip()) > 15]
@@ -268,7 +258,6 @@ class NLPEngine:
         score = round((quantified_count / len(lines)) * 100, 2)
         return score, len(lines)
 
-    # ─── Skill Gap Detection ─────────────────────────────────────────────
     def skill_gap(self, resume_skills: list[str], job_text: str) -> tuple[list[str], list[str]]:
         jd_lower = job_text.lower()
         
@@ -287,7 +276,6 @@ class NLPEngine:
         missing = [s for s in jd_tech_skills if s not in resume_set]
         return matched, missing
 
-    # ─── Full Analysis Pipeline ───────────────────────────────────────────
     def analyze(self, resume_text: str, job_description: Optional[str] = None) -> dict:
         cleaned_resume = self.clean_text(resume_text)
         tech_skills, soft_skills = self.extract_skills(cleaned_resume)

@@ -1,29 +1,27 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuthStore } from './stores/authStore';
 import Layout from './components/Layout';
 
-// Pages
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
-import UploadPage from './pages/UploadPage';
-import AnalysisPage from './pages/AnalysisPage';
-import InterviewCoachPage from './pages/InterviewCoachPage';
-import CoverLetterPage from './pages/CoverLetterPage';
-import ChatCoachPage from './pages/ChatCoachPage';
-// import removed
-import AdminPage from './pages/AdminPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
+// Lazy loaded pages for code splitting and performance
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const UploadPage = lazy(() => import('./pages/UploadPage'));
+const AnalysisPage = lazy(() => import('./pages/AnalysisPage'));
+const InterviewCoachPage = lazy(() => import('./pages/InterviewCoachPage'));
+const CoverLetterPage = lazy(() => import('./pages/CoverLetterPage'));
+const ChatCoachPage = lazy(() => import('./pages/ChatCoachPage'));
+const AdminPage = lazy(() => import('./pages/AdminPage'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
 
-// ─── Protected Route Guard ────────────────────────────
 const ProtectedRoute = () => {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
-// ─── Admin Route Guard ────────────────────────────────
 const AdminRoute = () => {
     const user = useAuthStore((s) => s.user);
     if (!user) return <Navigate to="/login" replace />;
@@ -31,7 +29,6 @@ const AdminRoute = () => {
     return <Outlet />;
 };
 
-// ─── Public Only (redirect if logged in) ─────────────
 const PublicRoute = () => {
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Outlet />;
@@ -93,7 +90,9 @@ const AnimatedRoutes = () => {
 export default function App() {
     return (
         <BrowserRouter>
-            <AnimatedRoutes />
+            <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+                <AnimatedRoutes />
+            </Suspense>
         </BrowserRouter>
     );
 }

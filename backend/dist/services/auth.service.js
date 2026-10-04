@@ -12,12 +12,22 @@ const errorHandler_1 = require("../middleware/errorHandler");
 const logger_1 = require("../config/logger");
 const email_service_1 = require("./email.service");
 const generateTokens = (user) => {
-    const payload = { id: user._id.toString(), email: user.email, role: user.role };
-    const accessToken = jsonwebtoken_1.default.sign(payload, env_1.config.JWT_SECRET, {
-        expiresIn: env_1.config.JWT_EXPIRES_IN,
-    });
-    const refreshToken = jsonwebtoken_1.default.sign({ id: user._id.toString() }, env_1.config.JWT_REFRESH_SECRET, { expiresIn: env_1.config.JWT_REFRESH_EXPIRES_IN });
-    return { accessToken, refreshToken };
+    try {
+        const payload = { id: user._id.toString(), email: user.email, role: user.role };
+        if (!env_1.config.JWT_SECRET)
+            throw new Error('JWT_SECRET is missing in environment variables');
+        if (!env_1.config.JWT_REFRESH_SECRET)
+            throw new Error('JWT_REFRESH_SECRET is missing in environment variables');
+        const accessToken = jsonwebtoken_1.default.sign(payload, env_1.config.JWT_SECRET, {
+            expiresIn: env_1.config.JWT_EXPIRES_IN,
+        });
+        const refreshToken = jsonwebtoken_1.default.sign({ id: user._id.toString() }, env_1.config.JWT_REFRESH_SECRET, { expiresIn: env_1.config.JWT_REFRESH_EXPIRES_IN });
+        return { accessToken, refreshToken };
+    }
+    catch (err) {
+        logger_1.logger.error(`[generateTokens] Failed to sign JWT: ${err.message}`);
+        throw err;
+    }
 };
 exports.authService = {
     register: async (input) => {
@@ -36,9 +46,19 @@ exports.authService = {
         return { user: user.toJSON(), tokens };
     },
     login: async (input) => {
-        const user = await User_model_1.UserModel.findOne({ email: input.email.toLowerCase() }).select('+password');
-        if (!user)
+        logger_1.logger.debug(`Login attempt for: ${input.email}`);
+        let user;
+        try {
+            user = await User_model_1.UserModel.findOne({ email: input.email.toLowerCase() }).select('+password');
+        }
+        catch (dbErr) {
+            logger_1.logger.error(`[authService.login] Database query failed: ${dbErr.message}`);
+            throw new errorHandler_1.AppError(`Database error: Please check if MongoDB is connected.`, 500, 'DB_ERROR');
+        }
+        if (!user) {
+            logger_1.logger.warn(`Login failed: User not found [${input.email}]`);
             throw new errorHandler_1.UnauthorizedError('Invalid email or password');
+        }
         if (!user.isActive)
             throw new errorHandler_1.UnauthorizedError('Account is deactivated. Contact support.');
         const isMatch = await user.comparePassword(input.password);

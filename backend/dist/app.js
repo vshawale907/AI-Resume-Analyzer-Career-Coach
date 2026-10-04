@@ -17,12 +17,13 @@ const apiResponse_1 = require("./middleware/apiResponse");
 const auth_routes_1 = __importDefault(require("./routes/auth.routes"));
 const resume_routes_1 = __importDefault(require("./routes/resume.routes"));
 const analysis_routes_1 = __importDefault(require("./routes/analysis.routes"));
-const job_routes_1 = __importDefault(require("./routes/job.routes"));
 const user_routes_1 = __importDefault(require("./routes/user.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const subscription_routes_1 = __importDefault(require("./routes/subscription.routes"));
 const chat_routes_1 = __importDefault(require("./routes/chat.routes"));
 const app = (0, express_1.default)();
+// ─── Trust Proxy (Required for Rate Limiting on Railway/Vercel) ──────────
+app.set('trust proxy', 1);
 // ─── Security Middleware ────────────────────────────────────
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: {
@@ -36,14 +37,28 @@ app.use((0, helmet_1.default)({
     crossOriginEmbedderPolicy: false,
 }));
 app.use((0, cors_1.default)({
-    origin: [
-        env_1.config.FRONTEND_URL,
-        'http://localhost:3000',
-        'http://localhost:5173',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:5173',
-        'https://your-frontend.onrender.com'
-    ],
+    origin: (origin, callback) => {
+        const allowedOrigins = [
+            env_1.config.FRONTEND_URL,
+            'http://localhost',
+            'http://localhost:80',
+            'http://localhost:3000',
+            'http://localhost:5173',
+            'http://127.0.0.1',
+            'http://127.0.0.1:80',
+            'http://127.0.0.1:3000',
+            'http://127.0.0.1:5173',
+        ];
+        // Allow Vercel preview deployments and production domain
+        const isAllowed = !origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app');
+        if (isAllowed) {
+            callback(null, true);
+        }
+        else {
+            logger_1.logger.error(`CORS REJECTED: Origin [${origin}] not in allowed list: ${allowedOrigins.join(', ')}`);
+            callback(new Error(`Not allowed by CORS: ${origin}`));
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -68,7 +83,6 @@ app.get('/health', (_req, res) => {
 app.use('/api/v1/auth', auth_routes_1.default);
 app.use('/api/v1/resumes', resume_routes_1.default);
 app.use('/api/v1/analysis', analysis_routes_1.default);
-app.use('/api/v1/jobs', job_routes_1.default);
 app.use('/api/v1/users', user_routes_1.default);
 app.use('/api/v1/admin', admin_routes_1.default);
 app.use('/api/v1/subscriptions', subscription_routes_1.default);

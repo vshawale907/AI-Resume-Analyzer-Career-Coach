@@ -439,6 +439,8 @@ cd frontend && npx vercel --prod
 
 ---
 
+# gmail: admin@talentlens.com
+# pass : Admin@1234
 ## 📄 License
 
 MIT © 2026 TalentLens

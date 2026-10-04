@@ -1,7 +1,6 @@
 import { QdrantClient } from '@qdrant/js-client-rest';
 import { logger } from './logger';
 
-// ─── Qdrant Client ─────────────────────────────────────────────────────────
 // By default, Qdrant runs on http://localhost:6333.
 // Override with QDRANT_URL for cloud/managed deployments.
 const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
@@ -12,18 +11,15 @@ export const qdrantClient = new QdrantClient({
     ...(QDRANT_API_KEY ? { apiKey: QDRANT_API_KEY } : {}),
 });
 
-// ─── Collection Names ────────────────────────────────────────────────────────
 export const COLLECTION = {
     JOBS: 'jobs',
     RESUMES: 'resumes',
 } as const;
 
-// ─── Embedding Dimensions ────────────────────────────────────────────────────
 // text-embedding-3-small → 1536 dims
 // text-embedding-ada-002  → 1536 dims
 export const EMBEDDING_DIM = 1536;
 
-// ─── Initialise Collections ─────────────────────────────────────────────────
 /**
  * Creates the Qdrant collections if they don't exist yet.
  * Safe to call on every server start — is idempotent.

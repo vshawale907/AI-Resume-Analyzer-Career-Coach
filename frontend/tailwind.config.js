@@ -5,7 +5,6 @@ export default {
     theme: {
         extend: {
             colors: {
-                // ── Black & Gold Palette ──────────────────────
                 primary: {
                     DEFAULT: '#111827',   // deep black
                     hover:   '#1F2937',   // slightly lighter black
@@ -32,7 +31,6 @@ export default {
                     gold:      '#F59E0B',
                 },
                 border: '#E5E7EB',
-                // ── Status colors ─────────────────────────────
                 success: { DEFAULT: '#16A34A', light: '#DCFCE7', border: '#86EFAC' },
                 danger:  { DEFAULT: '#DC2626', light: '#FEF2F2', border: '#FECACA' },
                 warn:    { DEFAULT: '#D97706', light: '#FFFBEB', border: '#FDE68A' },

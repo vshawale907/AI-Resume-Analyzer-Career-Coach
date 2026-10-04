@@ -45,42 +45,68 @@ const resumeWorker_1 = require("./workers/resumeWorker");
 const qdrant_1 = require("./config/qdrant");
 const bootstrap = async () => {
     try {
-        // Connect to MongoDB
-        await (0, database_1.connectDB)();
-        logger_1.logger.info('✅ MongoDB connected');
-        // Connect to Redis
-        await (0, redis_1.connectRedis)();
-        logger_1.logger.info('✅ Redis connected');
-        // Start background workers
-        (0, resumeWorker_1.startResumeWorker)();
-        logger_1.logger.info('✅ Resume processing worker started');
-        // Ping AI Service Health
-        try {
-            const { nlpClient } = await Promise.resolve().then(() => __importStar(require('./services/nlp.client')));
-            const isHealthy = await nlpClient.healthCheck();
-            if (isHealthy) {
-                logger_1.logger.info('✅ Python NLP Service is healthy');
-            }
-            else {
-                logger_1.logger.warn('⚠️  Python NLP Service is unreachable or unhealthy (graceful degradation)');
-            }
-        }
-        catch (err) {
-            logger_1.logger.warn(`⚠️  Python NLP Service health ping failed: ${err?.message}`);
-        }
-        // Initialize Qdrant vector collections (graceful — ok if Qdrant is not running)
-        try {
-            await (0, qdrant_1.initQdrantCollections)();
-            logger_1.logger.info('✅ Qdrant collections initialized');
-        }
-        catch (err) {
-            logger_1.logger.warn(`⚠️  Qdrant unavailable: ${err?.message}. Semantic search will fall back to keyword matching.`);
-        }
-        // Start HTTP server
+        // 1. START HTTP SERVER FIRST (IMPORTANT for Healthcheck)
         const PORT = process.env.PORT || env_1.config.PORT || 5000;
         const server = app_1.default.listen(PORT, () => {
-            logger_1.logger.info(`🚀 Server running on port ${PORT} [${env_1.config.NODE_ENV}]`);
+            logger_1.logger.info(`🚀 Server running on port ${PORT} [production]`);
         });
+        // 2. CONNECT TO DATABASES + BACKGROUND SERVICES (non-blocking)
+        (async () => {
+            // Connect to MongoDB
+            try {
+                await (0, database_1.connectDB)();
+                logger_1.logger.info('✅ MongoDB connected');
+            }
+            catch (dbErr) {
+                logger_1.logger.error('❌ MONGODB CONNECTION FAILED! Check Atlas Whitelist (0.0.0.0/0).');
+                logger_1.logger.error(`Error: ${dbErr.message}`);
+            }
+            // Connect to Redis
+            try {
+                await (0, redis_1.connectRedis)();
+                logger_1.logger.info('✅ Redis connected');
+            }
+            catch (redisErr) {
+                logger_1.logger.error('❌ REDIS CONNECTION FAILED! Check REDIS_URL format.');
+                logger_1.logger.error(`Error: ${redisErr.message}`);
+            }
+            // Start background workers
+            try {
+                const { isRedisConnected } = await Promise.resolve().then(() => __importStar(require('./config/redis')));
+                if (isRedisConnected()) {
+                    (0, resumeWorker_1.startResumeWorker)();
+                    logger_1.logger.info('✅ Resume processing worker started');
+                }
+                else {
+                    logger_1.logger.warn('⚠️  Redis not connected. Resume processing worker skipped.');
+                }
+            }
+            catch (workerErr) {
+                logger_1.logger.error(`❌ Background worker failed to start: ${workerErr.message}`);
+            }
+            // Ping AI Service Health
+            try {
+                const { nlpClient } = await Promise.resolve().then(() => __importStar(require('./services/nlp.client')));
+                const isHealthy = await nlpClient.healthCheck();
+                if (isHealthy) {
+                    logger_1.logger.info('✅ Python NLP Service is healthy');
+                }
+                else {
+                    logger_1.logger.warn('⚠️  Python NLP Service is unreachable or unhealthy (graceful degradation)');
+                }
+            }
+            catch (err) {
+                logger_1.logger.warn(`⚠️  Python NLP Service health ping failed: ${err?.message}`);
+            }
+            // Initialize Qdrant vector collections (graceful)
+            try {
+                await (0, qdrant_1.initQdrantCollections)();
+                logger_1.logger.info('✅ Qdrant collections initialized');
+            }
+            catch (err) {
+                logger_1.logger.warn(`⚠️  Qdrant unavailable: ${err?.message}. Semantic search will fall back to keyword matching.`);
+            }
+        })();
         // Graceful shutdown
         const shutdown = (signal) => {
             logger_1.logger.info(`Received ${signal}, shutting down gracefully...`);

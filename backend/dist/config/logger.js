@@ -17,7 +17,7 @@ const transports = [
     // Console (dev only)
     new winston_1.default.transports.Console({
         format: combine(colorize({ all: true }), timestamp({ format: 'HH:mm:ss' }), errors({ stack: true }), logFormat),
-        silent: env_1.config.NODE_ENV === 'production',
+        silent: env_1.config.NODE_ENV === 'test',
     }),
     // Daily rotating error log
     new winston_daily_rotate_file_1.default({

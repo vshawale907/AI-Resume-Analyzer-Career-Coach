@@ -85,8 +85,6 @@ const UserSchema = new mongoose_1.Schema({
     },
 });
 // Indexes
-UserSchema.index({ email: 1 }, { unique: true });
-UserSchema.index({ role: 1 });
 UserSchema.index({ subscriptionTier: 1 });
 UserSchema.index({ stripeCustomerId: 1 });
 // Hash password before save

@@ -4,7 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Base ──────────────────────────────────────────── */
 @layer base {
   :root {
     --scrollbar-bg: #F3F4F6;
@@ -32,10 +31,8 @@
   ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); @apply rounded-full; }
 }
 
-/* ─── Components ────────────────────────────────────── */
 @layer components {
 
-  /* ── Buttons ──────────────────────────────────────── */
   /* Black primary button */
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary hover:bg-primary-hover text-text-inverse font-semibold rounded-xl transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none text-base;
@@ -55,14 +52,12 @@
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-background-panel rounded-lg transition-all duration-200 ease-in-out;
   }
 
-  /* ── Inputs ───────────────────────────────────────── */
   .input-field {
     @apply w-full bg-white border border-border rounded-xl px-4 py-3.5 text-text-primary text-base
            placeholder-text-muted focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20
            transition-all duration-200;
   }
 
-  /* ── Cards ────────────────────────────────────────── */
   .card {
     @apply bg-background-card border border-border rounded-xl p-6 shadow-card transition-all duration-200;
   }
@@ -81,7 +76,6 @@
     @apply card border-l-4 border-l-accent;
   }
 
-  /* ── Badges ───────────────────────────────────────── */
   .badge {
     @apply inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-150;
   }
@@ -113,26 +107,21 @@
     @apply badge bg-warn-light text-warn border border-warn-border hover:opacity-90;
   }
 
-  /* ── Score ring ───────────────────────────────────── */
   .score-ring { @apply relative inline-flex items-center justify-center; }
   .score-text { @apply text-accent font-bold text-4xl; }
 
-  /* ── Section label ────────────────────────────────── */
   .section-label {
     @apply text-xs font-bold uppercase tracking-widest text-accent flex items-center gap-2;
   }
 
-  /* ── Glow ─────────────────────────────────────────── */
   .glow-gold {
     box-shadow: 0 0 28px -4px rgba(245, 158, 11, 0.35);
   }
 
-  /* ── Gradient text ────────────────────────────────── */
   .gradient-text {
     @apply bg-gradient-to-r from-text-primary via-accent to-accent-light bg-clip-text text-transparent;
   }
 
-  /* ── Sidebar nav link ─────────────────────────────── */
   /* Note: 'group' is applied via className in JSX, not @apply (postcss restriction) */
   .nav-link-active {
     @apply flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200 border bg-accent text-white border-accent/20 shadow-sm;
@@ -143,7 +132,6 @@
   }
 }
 
-/* ─── Utilities ─────────────────────────────────────── */
 @layer utilities {
 
   .animate-in     { animation: slideUp 0.4s ease-out both; }
@@ -184,7 +172,6 @@
   .stagger-children > *:nth-child(5) { animation-delay: 240ms; }
 }
 
-/* ─── Keyframes ─────────────────────────────────────── */
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0);    }
@@ -205,10 +192,8 @@
   30%            { transform: translateY(-6px); }
 }
 
-/* ─── Recharts ───────────────────────────────────────── */
 .recharts-tooltip-wrapper { @apply !outline-none; }
 
-/* ─── Autofill fix ───────────────────────────────────── */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {

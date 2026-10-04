@@ -20,7 +20,6 @@ import {
     SectionStatus
 } from '../lib/resumeAnalysis';
 
-// --- Interfaces ---
 interface NLPResult {
     extractedSkills: string[];
     softSkills: string[];
@@ -71,7 +70,6 @@ interface ResumeData {
     createdAt: string;
 }
 
-// --- Components ---
 
 const AnimatedCounter = ({ value }: { value: number }) => {
     const [count, setCount] = useState(0);
@@ -109,7 +107,6 @@ const CircularProgress = ({ score, colorClass, icon: Icon }: { score: number, co
     );
 };
 
-// --- Main Page ---
 
 export default function AnalysisPage() {
     const navigate = useNavigate();

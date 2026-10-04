@@ -6,7 +6,6 @@ import { logger } from '../config/logger';
 const openai = config.OPENAI_API_KEY ? new OpenAI({ apiKey: config.OPENAI_API_KEY }) : null;
 const genAI = config.GEMINI_API_KEY ? new GoogleGenerativeAI(config.GEMINI_API_KEY) : null;
 
-// ─── Embedding Dimension ────────────────────────────────────────────────────
 export const EMBEDDING_DIM = 1536; // text-embedding-3-small or ada-002
 
 /**
@@ -20,7 +19,6 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     // Trim text to avoid token limits — embeddings work well on 512-1024 token chunks
     const truncated = text.slice(0, 6000);
 
-    // ── OpenAI Embedding (preferred) ──────────────────────────────────────────
     if (openai) {
         try {
             const response = await openai.embeddings.create({
@@ -34,7 +32,6 @@ export async function generateEmbedding(text: string): Promise<number[]> {
         }
     }
 
-    // ── Gemini Embedding (fallback) ───────────────────────────────────────────
     if (genAI) {
         try {
             const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });

@@ -9,14 +9,12 @@ export const api = axios.create({
     timeout: 120000, // 2 minutes for AI operations
 });
 
-// ─── Request Interceptor: Attach JWT ──────────────────
 api.interceptors.request.use((config) => {
     const token = useAuthStore.getState().accessToken;
     if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
 });
 
-// ─── Response Interceptor: Auto-refresh Token ─────────
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
@@ -44,7 +42,6 @@ api.interceptors.response.use(
     }
 );
 
-// ─── Typed API helpers ─────────────────────────────────
 export const authApi = {
     register: (data: { name: string; email: string; password: string }) => api.post('/auth/register', data),
     login: (data: { email: string; password: string }) => api.post('/auth/login', data),

@@ -15,7 +15,6 @@ export interface JobMatchResult {
     industry: string;
 }
 
-// ─── Upsert a Job Vector ─────────────────────────────────────────────────────
 /**
  * Generates and stores a job embedding in Qdrant.
  * Call this whenever a new job is created or its description is updated.
@@ -63,7 +62,6 @@ export async function indexJob(jobId: string): Promise<void> {
     logger.debug(`[VectorSearch] Indexed job ${jobId} (${job.title})`);
 }
 
-// ─── Upsert a Resume Vector ───────────────────────────────────────────────────
 /**
  * Generates and stores a resume embedding in Qdrant.
  * Called from the background worker after resume processing is complete.
@@ -93,7 +91,6 @@ export async function indexResume(resumeId: string, skills: string[]): Promise<v
     logger.debug(`[VectorSearch] Indexed resume ${resumeId}`);
 }
 
-// ─── Find Matching Jobs ───────────────────────────────────────────────────────
 /**
  * Uses the user's resume vector to find semantically similar active job postings.
  * Returns the top N jobs sorted by similarity score (0-1).
@@ -139,7 +136,6 @@ export async function findMatchingJobs(
     }));
 }
 
-// ─── Delete Resume Vector ─────────────────────────────────────────────────────
 export async function deleteResumeVector(resumeId: string): Promise<void> {
     await qdrantClient.delete(COLLECTION.RESUMES, {
         wait: true,
@@ -148,7 +144,6 @@ export async function deleteResumeVector(resumeId: string): Promise<void> {
     logger.debug(`[VectorSearch] Deleted resume vector ${resumeId}`);
 }
 
-// ─── Delete Job Vector ────────────────────────────────────────────────────────
 export async function deleteJobVector(jobId: string): Promise<void> {
     await qdrantClient.delete(COLLECTION.JOBS, {
         wait: true,

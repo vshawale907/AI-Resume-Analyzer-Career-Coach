@@ -17,7 +17,6 @@ import { logger } from '../config/logger';
 import { uploadToS3, deleteFromS3 } from '../config/s3';
 import { enqueueResumeAnalysis } from '../jobs/resumeQueue';
 
-// ─── Multer Storage ────────────────────────────────────────────────────────
 const storage = multer.diskStorage({
     destination: (_req, _file, cb) => {
         const uploadDir = path.resolve(config.UPLOAD_DIR);
@@ -46,7 +45,6 @@ export const upload = multer({
     limits: { fileSize: config.MAX_FILE_SIZE_MB * 1024 * 1024 },
 });
 
-// ─── Text Extraction ───────────────────────────────────────────────────────
 const extractText = async (filePath: string, fileType: string): Promise<string> => {
     if (fileType === 'pdf') {
         const buffer = fs.readFileSync(filePath);
@@ -62,7 +60,6 @@ const extractText = async (filePath: string, fileType: string): Promise<string> 
     throw new AppError('Unsupported file type', 400, 'UNSUPPORTED_FILE');
 };
 
-// ─── Text Cleaning ─────────────────────────────────────────────────────────
 const cleanText = (raw: string): string => {
     return xss(raw)
         .replace(/\r\n/g, '\n')
@@ -71,7 +68,6 @@ const cleanText = (raw: string): string => {
         .trim();
 };
 
-// ─── Resume Service ────────────────────────────────────────────────────────
 export const resumeService = {
     upload: async (
         userId: string,
