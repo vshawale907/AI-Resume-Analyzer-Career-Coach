@@ -1,0 +1,48 @@
+# =============================================================
+# Interview preparation files — keep these local only
+# =============================================================
+TalentLens_Interview_Prep.md
+TalentLens_Complete_Interview_Mastery.md
+Interview_Metrics_Prep.md
+interview_prep_talentlens.md
+
+# =============================================================
+# Industry Standard Ignores
+# =============================================================
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+venv/
+.venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Misc
+.qodo/
