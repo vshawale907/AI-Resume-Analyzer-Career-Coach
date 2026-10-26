@@ -5,12 +5,10 @@ exports.enqueueResumeAnalysis = enqueueResumeAnalysis;
 const bullmq_1 = require("bullmq");
 const env_1 = require("../config/env");
 const logger_1 = require("../config/logger");
-// ─── Connection Options ────────────────────────────────────────────────────
 // BullMQ requires a dedicated Redis connection (not shared with ioredis cache client)
 const redisConnection = {
     url: env_1.config.REDIS_URL,
 };
-// ─── Queue Definition ─────────────────────────────────────────────────────
 /**
  * The main queue for all resume AI processing jobs.
  * Each job contains enough information for a background worker to
@@ -28,7 +26,6 @@ exports.resumeQueue = new bullmq_1.Queue('resume-processing', {
         removeOnFail: { age: 24 * 3600 }, // Keep failed jobs for 24h for debugging
     },
 });
-// ─── Queue Events (for logging) ───────────────────────────────────────────
 exports.resumeQueueEvents = new bullmq_1.QueueEvents('resume-processing', {
     connection: redisConnection,
 });

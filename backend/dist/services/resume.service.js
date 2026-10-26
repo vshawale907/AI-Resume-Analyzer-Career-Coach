@@ -22,7 +22,6 @@ const redis_1 = require("../config/redis");
 const logger_1 = require("../config/logger");
 const s3_1 = require("../config/s3");
 const resumeQueue_1 = require("../jobs/resumeQueue");
-// ─── Multer Storage ────────────────────────────────────────────────────────
 const storage = multer_1.default.diskStorage({
     destination: (_req, _file, cb) => {
         const uploadDir = path_1.default.resolve(env_1.config.UPLOAD_DIR);
@@ -49,7 +48,6 @@ exports.upload = (0, multer_1.default)({
     fileFilter,
     limits: { fileSize: env_1.config.MAX_FILE_SIZE_MB * 1024 * 1024 },
 });
-// ─── Text Extraction ───────────────────────────────────────────────────────
 const extractText = async (filePath, fileType) => {
     if (fileType === 'pdf') {
         const buffer = fs_1.default.readFileSync(filePath);
@@ -62,7 +60,6 @@ const extractText = async (filePath, fileType) => {
     }
     throw new errorHandler_1.AppError('Unsupported file type', 400, 'UNSUPPORTED_FILE');
 };
-// ─── Text Cleaning ─────────────────────────────────────────────────────────
 const cleanText = (raw) => {
     return (0, xss_1.default)(raw)
         .replace(/\r\n/g, '\n')
@@ -70,7 +67,6 @@ const cleanText = (raw) => {
         .replace(/\n{3,}/g, '\n\n')
         .trim();
 };
-// ─── Resume Service ────────────────────────────────────────────────────────
 exports.resumeService = {
     upload: async (userId, file, title) => {
         const fileExt = path_1.default.extname(file.originalname).toLowerCase().replace('.', '');

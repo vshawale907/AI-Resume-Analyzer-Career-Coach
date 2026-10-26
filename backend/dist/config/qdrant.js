@@ -4,7 +4,6 @@ exports.EMBEDDING_DIM = exports.COLLECTION = exports.qdrantClient = void 0;
 exports.initQdrantCollections = initQdrantCollections;
 const js_client_rest_1 = require("@qdrant/js-client-rest");
 const logger_1 = require("./logger");
-// ─── Qdrant Client ─────────────────────────────────────────────────────────
 // By default, Qdrant runs on http://localhost:6333.
 // Override with QDRANT_URL for cloud/managed deployments.
 const QDRANT_URL = process.env.QDRANT_URL || 'http://localhost:6333';
@@ -14,16 +13,13 @@ exports.qdrantClient = new js_client_rest_1.QdrantClient({
     checkCompatibility: false,
     ...(QDRANT_API_KEY ? { apiKey: QDRANT_API_KEY } : {}),
 });
-// ─── Collection Names ────────────────────────────────────────────────────────
 exports.COLLECTION = {
     JOBS: 'jobs',
     RESUMES: 'resumes',
 };
-// ─── Embedding Dimensions ────────────────────────────────────────────────────
 // text-embedding-3-small → 1536 dims
 // text-embedding-ada-002  → 1536 dims
 exports.EMBEDDING_DIM = 1536;
-// ─── Initialise Collections ─────────────────────────────────────────────────
 /**
  * Creates the Qdrant collections if they don't exist yet.
  * Safe to call on every server start — is idempotent.

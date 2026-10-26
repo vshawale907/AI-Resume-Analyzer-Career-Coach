@@ -13,7 +13,6 @@ const errorHandler_1 = require("../middleware/errorHandler");
 const openai = env_1.config.OPENAI_API_KEY ? new openai_1.default({ apiKey: env_1.config.OPENAI_API_KEY }) : null;
 const groq = env_1.config.GROQ_API_KEY ? new groq_sdk_1.default({ apiKey: env_1.config.GROQ_API_KEY }) : null;
 const genAI = env_1.config.GEMINI_API_KEY ? new generative_ai_1.GoogleGenerativeAI(env_1.config.GEMINI_API_KEY) : null;
-// ─── Prompt Injection Guard ────────────────────────────────────────────────
 const INJECTION_PATTERNS = [
     /ignore\s+(previous|above|all)\s+instructions/gi,
     /you\s+are\s+now\s+a/gi,
@@ -31,7 +30,6 @@ const sanitizeInput = (text) => {
     }
     return sanitized.trim();
 };
-// ─── JSON Parser with fallback ─────────────────────────────────────────────
 const sanitizeAndValidateJSON = (raw) => {
     try {
         let jsonStr = raw.trim();
@@ -100,7 +98,6 @@ const attemptSingleGeneration = async (genFn, userPrompt, provider, model) => {
     }
     throw new Error('JSON parsing failed after retry');
 };
-// ─── Core LLM caller ──────────────────────────────────────────────────────
 const callGPT = async (systemPrompt, userPrompt, maxTokens = 3000) => {
     if (genAI) {
         const geminiModels = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-pro'];
@@ -164,7 +161,6 @@ const callGPT = async (systemPrompt, userPrompt, maxTokens = 3000) => {
     }
     throw new errorHandler_1.AppError('All AI services failed or are unavailable in the fallback chain.', 502, 'NO_AI_KEYS');
 };
-// ─── NLP Fallback Extraction ────────────────────────────────────────────────
 const extractNLPDataFallback = async (resumeText, jobDescription) => {
     const SYSTEM = `You are an expert NLP resume parser. You MUST return ONLY valid JSON matching the schema exactly.
 Extract technical skills, soft skills, and calculate years of experience.

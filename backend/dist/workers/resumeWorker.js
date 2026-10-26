@@ -11,7 +11,6 @@ const nlp_client_1 = require("../services/nlp.client");
 const openai_service_1 = require("../services/openai.service");
 const redis_1 = require("../config/redis");
 const vectorSearch_service_1 = require("../services/vectorSearch.service");
-// ─── Worker ────────────────────────────────────────────────────────────────
 const startResumeWorker = () => {
     const worker = new bullmq_1.Worker('resume-processing', async (job) => {
         const { resumeId, userId, jobDescriptionText } = job.data;
@@ -23,7 +22,6 @@ const startResumeWorker = () => {
         }
         const start = Date.now();
         await job.updateProgress(20);
-        // ─── Step 1: NLP Extraction (Python microservice or LLM fallback) ───────
         let nlpResult;
         try {
             logger_1.logger.info(`[Worker] Calling NLP service for ${resumeId}...`);
@@ -37,7 +35,6 @@ const startResumeWorker = () => {
             nlpResult = await (0, openai_service_1.extractNLPDataFallback)(resume.cleanedText, jobDescriptionText);
         }
         await job.updateProgress(60);
-        // ─── Step 2: AI Scoring ──────────────────────────────────────────────────
         let openAIResult = null;
         try {
             openAIResult = await (0, openai_service_1.scoreResume)(resume.cleanedText, nlpResult, jobDescriptionText);
@@ -48,7 +45,6 @@ const startResumeWorker = () => {
         }
         await job.updateProgress(85);
         const processingTimeMs = Date.now() - start;
-        // ─── Step 3: Save to MongoDB ─────────────────────────────────────────────
         await Analysis_model_1.AnalysisModel.updateMany({ resume: resumeId, isLatest: true }, { isLatest: false });
         const version = (await Analysis_model_1.AnalysisModel.countDocuments({ resume: resumeId })) + 1;
         // Sanitize keyword density keys
@@ -68,16 +64,13 @@ const startResumeWorker = () => {
         if (openAIResult)
             analysisPayload.openAIResult = openAIResult;
         const analysis = await Analysis_model_1.AnalysisModel.create(analysisPayload);
-        // ─── Step 4: Update database status ─────────────────────────────────────
         await Promise.all([
             Resume_model_1.ResumeModel.findByIdAndUpdate(resumeId, { status: Resume_model_1.ResumeStatus.ANALYZED }),
             User_model_1.UserModel.findByIdAndUpdate(userId, { $inc: { analysisCount: 1 } }),
         ]);
-        // ─── Step 5: Cache the result ────────────────────────────────────────────
         const cacheKey = `analysis:${resumeId}:${jobDescriptionText ? 'jd' : 'nojd'}`;
         const cacheTTL = openAIResult ? 3600 : 30;
         await redis_1.cache.set(cacheKey, analysis, cacheTTL);
-        // ─── Step 6: Index resume vector in Qdrant ──────────────────────────────
         try {
             await (0, vectorSearch_service_1.indexResume)(resumeId, nlpResult.extractedSkills || []);
         }

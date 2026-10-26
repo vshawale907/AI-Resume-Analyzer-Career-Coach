@@ -22,9 +22,7 @@ const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const subscription_routes_1 = __importDefault(require("./routes/subscription.routes"));
 const chat_routes_1 = __importDefault(require("./routes/chat.routes"));
 const app = (0, express_1.default)();
-// ─── Trust Proxy (Required for Rate Limiting on Railway/Vercel) ──────────
 app.set('trust proxy', 1);
-// ─── Security Middleware ────────────────────────────────────
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: {
         directives: {
@@ -63,23 +61,17 @@ app.use((0, cors_1.default)({
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
-// ─── Body Parsing ───────────────────────────────────────────
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 app.use((0, compression_1.default)());
-// ─── HTTP Logging ───────────────────────────────────────────
 app.use((0, morgan_1.default)('combined', {
     stream: { write: (msg) => logger_1.logger.http(msg.trim()) },
 }));
-// ─── API Response Standardization ──────────────────────────
 app.use(apiResponse_1.apiResponseMiddleware);
-// ─── Rate Limiting ──────────────────────────────────────────
 app.use('/api/', rateLimiter_1.rateLimiter.general);
-// ─── Health Check ───────────────────────────────────────────
 app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
-// ─── API Routes ─────────────────────────────────────────────
 app.use('/api/v1/auth', auth_routes_1.default);
 app.use('/api/v1/resumes', resume_routes_1.default);
 app.use('/api/v1/analysis', analysis_routes_1.default);
@@ -87,7 +79,6 @@ app.use('/api/v1/users', user_routes_1.default);
 app.use('/api/v1/admin', admin_routes_1.default);
 app.use('/api/v1/subscriptions', subscription_routes_1.default);
 app.use('/api/v1/chat', chat_routes_1.default);
-// ─── Error Handler (must be last) ──────────────────────────
 app.use(errorHandler_1.errorHandler);
 exports.default = app;
 //# sourceMappingURL=app.js.map

@@ -11,7 +11,6 @@ const env_1 = require("../config/env");
 const logger_1 = require("../config/logger");
 const openai = env_1.config.OPENAI_API_KEY ? new openai_1.default({ apiKey: env_1.config.OPENAI_API_KEY }) : null;
 const genAI = env_1.config.GEMINI_API_KEY ? new generative_ai_1.GoogleGenerativeAI(env_1.config.GEMINI_API_KEY) : null;
-// ─── Embedding Dimension ────────────────────────────────────────────────────
 exports.EMBEDDING_DIM = 1536; // text-embedding-3-small or ada-002
 /**
  * Generates a dense vector embedding for a given text.
@@ -23,7 +22,6 @@ exports.EMBEDDING_DIM = 1536; // text-embedding-3-small or ada-002
 async function generateEmbedding(text) {
     // Trim text to avoid token limits — embeddings work well on 512-1024 token chunks
     const truncated = text.slice(0, 6000);
-    // ── OpenAI Embedding (preferred) ──────────────────────────────────────────
     if (openai) {
         try {
             const response = await openai.embeddings.create({
@@ -37,7 +35,6 @@ async function generateEmbedding(text) {
             logger_1.logger.warn(`[Embedding] OpenAI embedding failed: ${err?.message}. Falling back to Gemini...`);
         }
     }
-    // ── Gemini Embedding (fallback) ───────────────────────────────────────────
     if (genAI) {
         try {
             const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });

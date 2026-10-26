@@ -10,7 +10,6 @@ const embedding_service_1 = require("./embedding.service");
 const Job_model_1 = require("../models/Job.model");
 const Resume_model_1 = require("../models/Resume.model");
 const logger_1 = require("../config/logger");
-// ─── Upsert a Job Vector ─────────────────────────────────────────────────────
 /**
  * Generates and stores a job embedding in Qdrant.
  * Call this whenever a new job is created or its description is updated.
@@ -53,7 +52,6 @@ async function indexJob(jobId) {
     });
     logger_1.logger.debug(`[VectorSearch] Indexed job ${jobId} (${job.title})`);
 }
-// ─── Upsert a Resume Vector ───────────────────────────────────────────────────
 /**
  * Generates and stores a resume embedding in Qdrant.
  * Called from the background worker after resume processing is complete.
@@ -80,7 +78,6 @@ async function indexResume(resumeId, skills) {
     });
     logger_1.logger.debug(`[VectorSearch] Indexed resume ${resumeId}`);
 }
-// ─── Find Matching Jobs ───────────────────────────────────────────────────────
 /**
  * Uses the user's resume vector to find semantically similar active job postings.
  * Returns the top N jobs sorted by similarity score (0-1).
@@ -117,7 +114,6 @@ async function findMatchingJobs(resumeId, topN = 20, minScore = 0.55) {
         industry: r.payload?.industry,
     }));
 }
-// ─── Delete Resume Vector ─────────────────────────────────────────────────────
 async function deleteResumeVector(resumeId) {
     await qdrant_1.qdrantClient.delete(qdrant_1.COLLECTION.RESUMES, {
         wait: true,
@@ -125,7 +121,6 @@ async function deleteResumeVector(resumeId) {
     });
     logger_1.logger.debug(`[VectorSearch] Deleted resume vector ${resumeId}`);
 }
-// ─── Delete Job Vector ────────────────────────────────────────────────────────
 async function deleteJobVector(jobId) {
     await qdrant_1.qdrantClient.delete(qdrant_1.COLLECTION.JOBS, {
         wait: true,
