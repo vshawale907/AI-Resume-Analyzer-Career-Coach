@@ -3,31 +3,31 @@
   "steps": [
     {
       "name": "Environment & Workspace Audit",
-      "command": "node -v && npm -v && test -d backend && test -d frontend && test -d ai-service && echo Monorepo workspace structure verified",
+      "command": "echo \"Node runtime: $(node -v)\" && echo \"NPM runtime: $(npm -v)\" && test -d backend && test -d frontend && test -d ai-service && echo '✓ Monorepo workspace structure verified'",
       "image": "node:20-alpine"
     },
     {
       "parallel": [
         {
           "name": "Backend Service Audit",
-          "command": "cd backend && cat package.json && test -f tsconfig.json && echo Backend TypeScript configuration verified",
+          "command": "echo 'Auditing Backend Service...' && cd backend && node -e \"const pkg=require('./package.json'); console.log('Service: ' + pkg.name + ' v' + pkg.version);\" && test -f tsconfig.json && echo '✓ Backend TypeScript configuration verified'",
           "image": "node:20-alpine"
         },
         {
           "name": "Frontend Client Audit",
-          "command": "cd frontend && cat package.json && test -f vite.config.ts && echo Frontend Vite and React configuration verified",
+          "command": "echo 'Auditing Frontend Client...' && cd frontend && node -e \"const pkg=require('./package.json'); console.log('Service: ' + pkg.name + ' v' + pkg.version);\" && test -f vite.config.ts && echo '✓ Frontend Vite & React configuration verified'",
           "image": "node:20-alpine"
         },
         {
           "name": "AI Service Syntax Compilation",
-          "command": "cd ai-service && python3 -m py_compile main.py && echo FastAPI AI Resume processing engine compiled and verified",
+          "command": "echo 'Auditing AI Python Service...' && cd ai-service && python3 -m py_compile main.py && echo '✓ FastAPI AI Resume processing engine compiled and verified'",
           "image": "python:3.11-alpine"
         }
       ]
     },
     {
       "name": "Deployment & Compose Readiness",
-      "command": "test -f docker-compose.yml && test -f nginx.conf && echo Docker Compose and Reverse Proxy configuration verified && echo Pipeline PASSED - All service checks passed successfully",
+      "command": "echo 'Checking Deployment Assets...' && test -f docker-compose.yml && test -f nginx.conf && echo '✓ Docker Compose and Reverse Proxy configuration verified' && echo '🎉 Pipeline PASSED - All service checks passed successfully!'",
       "image": "node:20-alpine"
     }
   ]
