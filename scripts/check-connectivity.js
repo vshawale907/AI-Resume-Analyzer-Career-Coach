@@ -24,7 +24,7 @@ async function runDiagnostics() {
         if (err.response) {
             console.error(`   Status: ${err.response.status}`);
         }
-        console.log('   👉 Tip: Check if the Railway service is running and the URL is correct.\n');
+        console.log('👉 Tip: Check if the Railway service is running and the URL is correct.\n');
     }
 
     // 2. Check CORS (Simulated)
