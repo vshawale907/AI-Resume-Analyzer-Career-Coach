@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IChatMessage {
     role: 'user' | 'assistant';
     content: string;
+    structured?: Record<string, unknown>;
     timestamp: Date;
 }
 
@@ -21,6 +22,7 @@ const ChatMessageSchema = new Schema<IChatMessage>(
     {
         role: { type: String, enum: ['user', 'assistant'], required: true },
         content: { type: String, required: true },
+        structured: { type: Schema.Types.Mixed },
         timestamp: { type: Date, default: Date.now },
     },
     { _id: false }

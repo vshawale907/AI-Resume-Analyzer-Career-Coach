@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Bot, Send, Plus, Trash2, Loader2, User, FileText, Target,
     Mic, Compass, Pencil, ChevronRight, Sparkles, MessageSquare,
-    CheckCircle, Lightbulb, Copy, Check
+    CheckCircle, Lightbulb, Copy, Check, AlertCircle, Upload, Briefcase
 } from 'lucide-react';
 import { chatApi, resumeApi } from '../lib/api';
 import { useResumeStore } from '../stores/resumeStore';
@@ -27,7 +28,7 @@ interface Message {
     mode?: CoachingMode;
 }
 
-interface Session { _id: string; title: string; createdAt: string; }
+interface Session { _id: string; title: string; resume?: string | null; createdAt: string; }
 
 const COACHING_MODES: { mode: CoachingMode; label: string; icon: typeof FileText; desc: string; prompt: string; color: string }[] = [
     {
@@ -183,30 +184,50 @@ function StructuredCard({ data, onCopy }: { data: StructuredResponse; onCopy: (t
 }
 
 export default function ChatCoachPage() {
+    const navigate = useNavigate();
     const { resumes, setResumes } = useResumeStore();
     const [sessions, setSessions] = useState<Session[]>([]);
     const [activeSession, setActiveSession] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [loadingSession, setLoadingSession] = useState(false);
+    const [updatingResume, setUpdatingResume] = useState(false);
     const [selectedResumeId, setSelectedResumeId] = useState('');
+    const [targetRole, setTargetRole] = useState('');
     const [activeMode, setActiveMode] = useState<CoachingMode>('general');
     const [bulletInput, setBulletInput] = useState('');
     const [showBulletModal, setShowBulletModal] = useState(false);
+    const [jobPosting, setJobPosting] = useState('');
+    const [showJobModal, setShowJobModal] = useState(false);
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+
+    const formatResumeName = (r: any) => {
+        let name = (r.originalFilename || r.title || 'Untitled Resume').replace(/\s+/g, ' ').trim();
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}/i.test(name)) {
+            name = `Uploaded Resume (${name.split('-')[0]})`;
+        }
+        return name.length > 42 ? name.substring(0, 42) + '…' : name;
+    };
+
+    const selectedResume = resumes.find((r: any) => r._id === selectedResumeId);
 
     useEffect(() => {
         resumeApi.list().then(({ data }) => {
             const list = Array.isArray(data.data) ? data.data : (data.data?.resumes ?? []);
             setResumes(list);
+            if (list.length > 0) {
+                const defaultResume = list.find((r: any) => r.status === 'analyzed') ?? list[0];
+                setSelectedResumeId((prev) => prev || defaultResume._id);
+            }
         }).catch(console.error);
         chatApi.getSessions().then(({ data }) => setSessions(data.data.sessions ?? [])).catch(console.error);
     }, []);
 
     useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
-    const newSession = async (startMode: CoachingMode = 'general') => {
+    const newSession = async (startMode: CoachingMode = 'general', autoPrompt?: string) => {
         try {
             const { data } = await chatApi.createSession(selectedResumeId || undefined);
             const s = data.data.session;
@@ -214,10 +235,55 @@ export default function ChatCoachPage() {
             setActiveSession(s._id);
             setMessages([]);
             setActiveMode(startMode);
+            if (autoPrompt) {
+                await sendMessage(autoPrompt, startMode, undefined, s._id);
+            }
         } catch (e) { console.error(e); }
     };
 
-    const sendMessage = async (overrideMessage?: string, overrideMode?: CoachingMode, bulletText?: string, overrideSessionId?: string) => {
+    const openSession = async (sessionId: string) => {
+        setActiveSession(sessionId);
+        setLoadingSession(true);
+        setMessages([]);
+        try {
+            const { data } = await chatApi.getSession(sessionId);
+            const sess = data.data.session;
+            const loadedMsgs: Message[] = (sess.messages ?? []).map((m: any) => ({
+                role: m.role,
+                content: m.content,
+                structured: m.structured ?? null,
+                mode: m.structured?.mode,
+            }));
+            setMessages(loadedMsgs);
+            if (sess.resume) {
+                setSelectedResumeId(String(sess.resume));
+            } else {
+                setSelectedResumeId('');
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoadingSession(false);
+        }
+    };
+
+    const handleResumeChange = async (newResumeId: string) => {
+        setSelectedResumeId(newResumeId);
+        if (!activeSession) return;
+        setUpdatingResume(true);
+        try {
+            await chatApi.updateSessionResume(activeSession, newResumeId || null);
+            setSessions((prev) =>
+                prev.map((s) => (s._id === activeSession ? { ...s, resume: newResumeId || null } : s))
+            );
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setUpdatingResume(false);
+        }
+    };
+
+    const sendMessage = async (overrideMessage?: string, overrideMode?: CoachingMode, bulletText?: string, overrideSessionId?: string, overrideJobPosting?: string) => {
         const text = overrideMessage ?? input.trim();
         const sid = overrideSessionId ?? activeSession;
         if (!text || !sid) return;
@@ -229,10 +295,23 @@ export default function ChatCoachPage() {
         setLoading(true);
 
         try {
-            const { data } = await chatApi.sendMessage(sid, text, mode, bulletText);
+            const { data } = await chatApi.sendMessage(sid, text, mode, bulletText, {
+                resumeId: selectedResumeId || null,
+                targetRole: targetRole.trim() || undefined,
+                jobPosting: (overrideJobPosting ?? jobPosting).trim() || undefined,
+            });
             const reply = data.data.reply as string;
             const structured = data.data.structured as StructuredResponse | null;
             setMessages((m) => [...m, { role: 'assistant', content: reply, structured, mode }]);
+            if (messages.length === 0) {
+                setSessions((prev) =>
+                    prev.map((s) =>
+                        s._id === sid && (s.title === 'Resume Coach Session' || s.title === 'New Chat Session')
+                            ? { ...s, title: text.slice(0, 60) + (text.length > 60 ? '…' : '') }
+                            : s
+                    )
+                );
+            }
         } catch {
             setMessages((m) => [...m, { role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }]);
         } finally {
@@ -248,16 +327,20 @@ export default function ChatCoachPage() {
             setShowBulletModal(true);
             return;
         }
+        if (modeConfig.mode === 'job_rag_coach') {
+            setActiveMode('job_rag_coach');
+            if (!jobPosting.trim()) {
+                setShowJobModal(true);
+                return;
+            }
+        }
 
-        try {
-            const { data } = await chatApi.createSession(selectedResumeId || undefined);
-            const s = data.data.session;
-            setSessions((prev) => [s, ...prev]);
-            setActiveSession(s._id);
-            setMessages([]);
-            setActiveMode(modeConfig.mode);
-            sendMessage(modeConfig.prompt, modeConfig.mode, undefined, s._id);
-        } catch(e) { console.error(e); }
+        setActiveMode(modeConfig.mode);
+        if (messages.length === 0) {
+            await sendMessage(modeConfig.prompt, modeConfig.mode, undefined, activeSession);
+        } else {
+            await sendMessage(modeConfig.prompt, modeConfig.mode, undefined, activeSession);
+        }
     };
 
     const submitBulletRewrite = () => {
@@ -266,6 +349,13 @@ export default function ChatCoachPage() {
         const msg = `Please rewrite this resume bullet point professionally:\n"${bulletInput}"`;
         sendMessage(msg, 'bullet_rewrite', bulletInput);
         setBulletInput('');
+    };
+
+    const submitJobPosting = () => {
+        if (!jobPosting.trim()) return;
+        setShowJobModal(false);
+        const ragConfig = COACHING_MODES.find((m) => m.mode === 'job_rag_coach')!;
+        sendMessage(ragConfig.prompt, 'job_rag_coach', undefined, undefined, jobPosting);
     };
 
     const deleteSession = async (id: string, e: React.MouseEvent) => {
@@ -300,16 +390,18 @@ export default function ChatCoachPage() {
                         <p className="text-gray-600 text-xs px-2 py-3 italic text-center">No sessions yet</p>
                     )}
                     {sessions.map((s) => (
-                        <button key={s._id} onClick={() => { setActiveSession(s._id); setMessages([]); }}
-                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs transition-all ${activeSession === s._id
+                        <div key={s._id} onClick={() => openSession(s._id)} role="button" tabIndex={0}
+                            onKeyDown={(e) => e.key === 'Enter' && openSession(s._id)}
+                            className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs transition-all cursor-pointer ${activeSession === s._id
                                 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold'
                                 : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'}`}>
                             <span className="truncate flex-1">{s.title ?? 'Session'}</span>
                             <button onClick={(e) => deleteSession(s._id, e)}
+                                title="Delete session"
                                 className="text-gray-600 hover:text-rose-400 transition-colors ml-1 p-0.5 rounded flex-shrink-0">
                                 <Trash2 size={12} />
                             </button>
-                        </button>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -332,19 +424,24 @@ export default function ChatCoachPage() {
                             </p>
                         </div>
 
-                        {resumes.length > 0 && (
+                        {resumes.length > 0 ? (
                             <div className="relative z-10 w-full max-w-xs text-left">
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                                     Link Resume Context (Recommended)
                                 </label>
                                 <select value={selectedResumeId} onChange={(e) => setSelectedResumeId(e.target.value)}
-                                    className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-amber-500/50 transition-all text-sm appearance-none">
+                                    className="w-full bg-gray-900 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-amber-500/50 transition-all text-sm">
                                     <option value="">General coaching (no resume)</option>
                                     {resumes.map((r: any) => (
-                                        <option key={r._id} value={r._id}>{r.originalFilename || r.title || 'Resume'}</option>
+                                        <option key={r._id} value={r._id}>{formatResumeName(r)}</option>
                                     ))}
                                 </select>
                             </div>
+                        ) : (
+                            <button onClick={() => navigate('/upload')}
+                                className="relative z-10 flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-gray-300 transition-colors">
+                                <Upload size={14} className="text-amber-400" /> Upload a Resume for Personalized Context
+                            </button>
                         )}
 
                         <button onClick={() => newSession()}
@@ -354,9 +451,17 @@ export default function ChatCoachPage() {
 
                         <div className="relative z-10 grid grid-cols-2 md:grid-cols-4 gap-3 w-full max-w-3xl mt-6">
                             {COACHING_MODES.slice(0, 8).map((m) => (
-                                <button key={m.mode} 
+                                <button key={m.mode}
                                     onClick={async () => {
-                                        await newSession(m.mode);
+                                        if (m.mode === 'bullet_rewrite') {
+                                            await newSession(m.mode);
+                                            setShowBulletModal(true);
+                                        } else if (m.mode === 'job_rag_coach') {
+                                            await newSession(m.mode);
+                                            setShowJobModal(true);
+                                        } else {
+                                            await newSession(m.mode, m.prompt);
+                                        }
                                     }}
                                     className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-900 border border-white/5 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all group">
                                     <m.icon size={20} className={`${m.color} group-hover:scale-110 transition-transform`} />
@@ -367,6 +472,60 @@ export default function ChatCoachPage() {
                     </motion.div>
                 ) : (
                     <>
+                        {/* Resume & Role Context Bar */}
+                        <div className="flex-shrink-0 border-b border-white/5 bg-gray-900/80 px-4 py-2.5 flex flex-wrap items-center gap-3">
+                            <div className="flex items-center gap-2 min-w-0 flex-1 sm:flex-initial">
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border whitespace-nowrap ${
+                                    selectedResume
+                                        ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
+                                        : 'bg-amber-500/10 border-amber-500/25 text-amber-400'
+                                }`}>
+                                    {selectedResume ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                                    {updatingResume ? 'Saving…' : selectedResume ? 'Resume Context' : 'No Resume'}
+                                </span>
+                                {resumes.length > 0 ? (
+                                    <select
+                                        value={selectedResumeId}
+                                        onChange={(e) => handleResumeChange(e.target.value)}
+                                        aria-label="Select resume context"
+                                        className="bg-gray-950 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500/50 transition-all max-w-[240px]"
+                                    >
+                                        <option value="">No resume (General coaching)</option>
+                                        {resumes.map((r: any) => (
+                                            <option key={r._id} value={r._id}>{formatResumeName(r)}</option>
+                                        ))}
+                                    </select>
+                                ) : (
+                                    <button
+                                        onClick={() => navigate('/upload')}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-amber-400 font-medium transition-colors"
+                                    >
+                                        <Upload size={12} /> Upload Resume
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2 ml-auto">
+                                <div className="relative">
+                                    <Briefcase size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" />
+                                    <input
+                                        value={targetRole}
+                                        onChange={(e) => setTargetRole(e.target.value)}
+                                        placeholder="Target role (optional)…"
+                                        className="bg-gray-950 border border-white/10 rounded-lg pl-7 pr-3 py-1.5 text-xs text-gray-200 placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-all w-44 sm:w-52"
+                                    />
+                                </div>
+                                {activeMode === 'job_rag_coach' && (
+                                    <button
+                                        onClick={() => setShowJobModal(true)}
+                                        className="px-2.5 py-1.5 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-medium hover:bg-indigo-500/25 transition-colors"
+                                    >
+                                        {jobPosting.trim() ? 'Edit JD' : 'Paste JD'}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
                         {/* Quick Mode Tabs */}
                         <div className="flex-shrink-0 border-b border-white/5 bg-gray-900/50 px-4 py-2.5">
                             <div className="flex gap-2 overflow-x-auto scrollbar-none">
@@ -392,14 +551,42 @@ export default function ChatCoachPage() {
 
                         {/* Messages */}
                         <div className="flex-1 overflow-y-auto p-4 space-y-5 min-h-0">
-                            {messages.length === 0 && !loading && (
+                            {loadingSession && (
+                                <div className="flex items-center justify-center h-full gap-2 text-gray-400 text-sm">
+                                    <Loader2 size={18} className="animate-spin text-amber-500" />
+                                    <span>Loading conversation…</span>
+                                </div>
+                            )}
+                            {messages.length === 0 && !loading && !loadingSession && (
                                 <div className="flex flex-col items-center justify-center h-full gap-5 text-center py-12">
                                     <div className="w-14 h-14 rounded-2xl bg-gray-900 border border-white/10 flex items-center justify-center">
                                         <Bot size={26} className="text-amber-500/50" />
                                     </div>
                                     <div>
                                         <p className="text-gray-300 text-sm font-medium">Choose a coaching mode above or ask me anything</p>
-                                        <p className="text-gray-600 text-xs mt-1">Your resume data is loaded as context</p>
+                                        {selectedResume ? (
+                                            <p className="text-emerald-400 text-xs mt-1.5 font-medium">
+                                                Resume context active: {formatResumeName(selectedResume)}
+                                            </p>
+                                        ) : (
+                                            <div className="mt-2 space-y-2">
+                                                <p className="text-amber-400/90 text-xs">
+                                                    No resume attached yet — select one below or in the top bar for resume-grounded advice.
+                                                </p>
+                                                {resumes.length > 0 && (
+                                                    <select
+                                                        value={selectedResumeId}
+                                                        onChange={(e) => handleResumeChange(e.target.value)}
+                                                        className="bg-gray-900 border border-amber-500/30 rounded-lg px-3 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-amber-500"
+                                                    >
+                                                        <option value="">Choose a resume to attach…</option>
+                                                        {resumes.map((r: any) => (
+                                                            <option key={r._id} value={r._id}>{formatResumeName(r)}</option>
+                                                        ))}
+                                                    </select>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 max-w-sm w-full mt-2">
                                         {COACHING_MODES.slice(0, 4).map((m) => (
@@ -533,6 +720,46 @@ export default function ChatCoachPage() {
                                 <button onClick={submitBulletRewrite} disabled={!bulletInput.trim()}
                                     className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
                                     <Sparkles size={14} /> Rewrite It
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            {/* ── Job Posting RAG Modal ── */}
+            <AnimatePresence>
+                {showJobModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+                        onClick={() => setShowJobModal(false)}>
+                        <motion.div initial={{ scale: 0.95, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.95, y: 20 }}
+                            className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                                    <Target size={18} className="text-indigo-400" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white">Target Job Description</h3>
+                                    <p className="text-xs text-gray-500">Paste a job posting to tailor coaching directly to the role</p>
+                                </div>
+                            </div>
+                            <div>
+                                <textarea
+                                    value={jobPosting}
+                                    onChange={(e) => setJobPosting(e.target.value)}
+                                    rows={6}
+                                    placeholder="Paste job requirements and responsibilities here…"
+                                    className="w-full bg-gray-950 border border-white/10 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:border-amber-500/50 transition-all resize-none"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowJobModal(false)}
+                                    className="flex-1 py-2.5 rounded-xl bg-gray-800 border border-white/10 text-gray-300 hover:text-white font-semibold text-sm transition-colors">Cancel</button>
+                                <button onClick={submitJobPosting} disabled={!jobPosting.trim()}
+                                    className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
+                                    <Sparkles size={14} /> Coach for This JD
                                 </button>
                             </div>
                         </motion.div>

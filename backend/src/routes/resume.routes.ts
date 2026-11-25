@@ -25,6 +25,11 @@ router.post('/:id/analyze', rateLimiter.analysis, async (req: AuthRequest, res: 
         const { jobDescriptionText } = z.object({
             jobDescriptionText: z.string().max(8000).optional(),
         }).parse(req.body);
+        const { ResumeModel, ResumeStatus } = await import('../models/Resume.model');
+        await ResumeModel.findOneAndUpdate(
+            { _id: req.params.id, user: req.user!.id },
+            { status: ResumeStatus.PROCESSING }
+        );
         const { enqueueResumeAnalysis } = await import('../jobs/resumeQueue');
         const jobId = await enqueueResumeAnalysis({
             resumeId: req.params.id,

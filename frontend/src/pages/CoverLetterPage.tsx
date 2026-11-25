@@ -72,7 +72,7 @@ export default function CoverLetterPage() {
                             </h2>
                             <div>
                                 <label className={labelCls}>Full Name *</label>
-                                <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} className={inputCls} placeholder="John Doe" />
+                                <input value={form.fullName} onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))} className={inputCls} placeholder="" />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>

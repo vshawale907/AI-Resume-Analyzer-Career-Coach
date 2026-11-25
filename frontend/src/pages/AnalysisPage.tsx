@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft, Download, RefreshCw, Target, Star, Award, GitCompare,
-    CheckCircle2, XCircle, AlertTriangle, Copy, Check, Sparkles, MessageSquare
+    CheckCircle2, XCircle, AlertTriangle, Copy, Check, Sparkles, MessageSquare,
+    ChevronDown, ChevronUp, Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Document, Packer, Paragraph, TextRun } from 'docx';
@@ -16,8 +17,12 @@ import {
     checkResumeSections,
     computeReadability,
     categorizeSkills,
+    computeFormattingScore,
+    filterKeywordDensity,
+    extractBulletLines,
     ReadabilityMetrics,
-    SectionStatus
+    SectionStatus,
+    FormattingCriteria
 } from '../lib/resumeAnalysis';
 
 interface NLPResult {
@@ -57,7 +62,7 @@ interface AnalysisData {
     resume: string;
     jobDescriptionText?: string;
     nlpResult: NLPResult;
-    openAIResult: OpenAIResult;
+    openAIResult?: OpenAIResult;  // BUG 1 FIX: mark optional — it CAN be missing
     createdAt: string;
 }
 
@@ -114,12 +119,14 @@ export default function AnalysisPage() {
     const resumeId = useResumeStore(s => s.selectedResumeId) || id;
 
     const [loading, setLoading] = useState(true);
+    const [pendingAnalysis, setPendingAnalysis] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
     const [resume, setResume] = useState<ResumeData | null>(null);
     const [copiedBullet, setCopiedBullet] = useState<string | null>(null);
     const [generatingDoc, setGeneratingDoc] = useState(false);
     const [expandedSkills, setExpandedSkills] = useState<Record<string, boolean>>({});
+    const [showFormattingDetails, setShowFormattingDetails] = useState(false);
 
     const toggleSkillCategory = (cat: string) => {
         setExpandedSkills(prev => ({ ...prev, [cat]: !prev[cat] }));
@@ -128,8 +135,14 @@ export default function AnalysisPage() {
     // Derived states
     const [sectionCompleteness, setSectionCompleteness] = useState(0);
     const [quantifiedScore, setQuantifiedScore] = useState(0);
+    const [quantifiedCount, setQuantifiedCount] = useState(0);
+    const [quantifiedTotal, setQuantifiedTotal] = useState(0);
     const [sectionStatuses, setSectionStatuses] = useState<SectionStatus[]>([]);
     const [readability, setReadability] = useState<ReadabilityMetrics | null>(null);
+    // BUG 6 FIX: real formatting criteria
+    const [formattingCriteria, setFormattingCriteria] = useState<FormattingCriteria | null>(null);
+    // BUG 4 FIX: real bullet count from resume text
+    const [realBulletCount, setRealBulletCount] = useState(0);
 
     const fetchData = async () => {
         if (!resumeId) return;
@@ -137,7 +150,6 @@ export default function AnalysisPage() {
             setLoading(true);
             setError(null);
             
-            // The backend lacks GET /resumes/:id, so we either get it from the store or fetch the bulk list to find it
             if (!resumeId || resumeId === "undefined") {
                 throw new Error("Invalid Resume ID in URL. Please navigate from the dashboard.");
             }
@@ -147,7 +159,7 @@ export default function AnalysisPage() {
                     console.error("Latest Analysis 404:", e);
                     return { data: null };
                 }),
-                api.get('/resumes').catch((e) => {
+                api.get('/resumes?limit=100').catch((e) => {
                     console.error("Resumes Fetch Error:", e);
                     return { data: { resumes: [] } };
                 })
@@ -157,16 +169,28 @@ export default function AnalysisPage() {
             const resumesArray = resResList.data?.data?.resumes || resResList.data?.resumes || resResList.data?.data || [];
             const rData = resumesArray.find((r: any) => r._id === resumeId);
 
-            if (!aData || !aData.nlpResult) throw new Error("Analysis is incomplete or has not been generated yet. Please analyze your resume from the dashboard first.");
             if (!rData) throw new Error("Could not locate the original resume document.");
-            
+
+            if (rData.status === 'processing' || rData.status === 'uploading') {
+                setResume(rData);
+                setPendingAnalysis(true);
+                return;
+            }
+            if (rData.status === 'error') {
+                throw new Error("Resume analysis failed in the background worker. Please try re-analyzing.");
+            }
+            if (!aData || !aData.nlpResult) {
+                throw new Error("Analysis is incomplete or has not been generated yet. Please analyze your resume from the dashboard first.");
+            }
+
+            setPendingAnalysis(false);
             setAnalysis(aData);
             setResume(rData);
 
-            // Compute Local Metrics
+            // Compute Local Metrics from the ACTUAL resume text
             const text = rData.rawText || rData.cleanedText || '';
-            const bullets = aData.openAIResult?.bulletImpactScores?.map((b: any) => b.bullet) || [];
 
+            // BUG 3 FIX: robust section detection
             const statuses = checkResumeSections(text);
             setSectionStatuses(statuses);
             
@@ -177,16 +201,22 @@ export default function AnalysisPage() {
             });
             setSectionCompleteness(Math.round((sScore / statuses.length) * 25));
             
-            if (typeof aData.nlpResult?.quantificationScore === 'number') {
-                setQuantifiedScore(Math.round((aData.nlpResult.quantificationScore / 100) * 25));
-            } else {
-                const totalBullets = Math.max(1, bullets.length);
-                const qCount = countQuantifiedBullets(text);
-                const qRatio = Math.min(1, qCount / totalBullets);
-                setQuantifiedScore(Math.round(qRatio * 25));
-            }
+            // BUG 4 FIX: count ALL real bullets from resume text
+            const allBullets = extractBulletLines(text);
+            setRealBulletCount(allBullets.length);
 
-            setReadability(computeReadability(text, bullets));
+            // BUG 4 FIX: quantification from real bullet lines
+            const { count: qCount, total: qTotal } = countQuantifiedBullets(text);
+            setQuantifiedCount(qCount);
+            setQuantifiedTotal(qTotal);
+            const qRatio = Math.min(1, qCount / Math.max(1, qTotal));
+            setQuantifiedScore(Math.round(qRatio * 25));
+
+            // BUG 4 FIX: readability from real bullets (not just AI-rewritten ones)
+            setReadability(computeReadability(text, []));
+
+            // BUG 6 FIX: real formatting evaluation
+            setFormattingCriteria(computeFormattingScore(text));
 
         } catch (err: any) {
             console.error('Fetch error:', err);
@@ -201,6 +231,27 @@ export default function AnalysisPage() {
         else fetchData();
     }, [resumeId]);
 
+    // BUG 1 FIX: Poll while BullMQ job is pending/processing
+    useEffect(() => {
+        if (!pendingAnalysis || !resumeId) return;
+        const timer = setInterval(async () => {
+            try {
+                const statusRes = await api.get(`/resumes/${resumeId}/status`);
+                const st = statusRes.data?.data?.status || statusRes.data?.status;
+                if (st === 'analyzed') {
+                    setPendingAnalysis(false);
+                    fetchData();
+                } else if (st === 'error') {
+                    setPendingAnalysis(false);
+                    setError('Analysis failed while processing. Please try again.');
+                }
+            } catch {
+                // Keep polling on transient errors
+            }
+        }, 2500);
+        return () => clearInterval(timer);
+    }, [pendingAnalysis, resumeId]);
+
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text);
         setCopiedBullet(text);
@@ -214,14 +265,12 @@ export default function AnalysisPage() {
         try {
             let optimizedText = resume.rawText || resume.cleanedText || '';
             
-            // Replace all original bullets with rewritten ones
             analysis.openAIResult?.bulletImpactScores?.forEach(b => {
                 if (b.rewritten && b.bullet && optimizedText.includes(b.bullet)) {
                     optimizedText = optimizedText.replace(b.bullet, b.rewritten);
                 }
             });
 
-            // Very basic DOCX generation from text
             const doc = new Document({
                 sections: [{
                     properties: {},
@@ -249,15 +298,47 @@ export default function AnalysisPage() {
 
     const handleReanalyze = async () => {
         try {
-            await api.post(`/resumes/${resumeId}/analyze`);
-            toast.success('Re-analysis queued. Check back shortly.');
-            navigate('/dashboard');
+            setPendingAnalysis(true);
+            setError(null);
+            await api.post(`/resumes/${resumeId}/analyze`, {
+                jobDescriptionText: analysis?.jobDescriptionText || undefined,
+            });
+            toast.success('Re-analysis queued. Updating results...');
         } catch (err) {
+            setPendingAnalysis(false);
             toast.error('Failed to queue analysis.');
         }
     };
 
-    if (loading) return <div className="p-10 flex justify-center"><div className="w-8 h-8 md:w-12 md:h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" /></div>;
+    if (loading || pendingAnalysis) return (
+        <div className="max-w-[1600px] mx-auto p-6 lg:p-8 space-y-6 animate-pulse">
+            <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                <div className="space-y-2">
+                    <div className="h-6 w-64 bg-gray-800 rounded-lg" />
+                    <div className="h-4 w-44 bg-gray-900 rounded" />
+                </div>
+                <div className="text-xs text-amber-400 flex items-center gap-2 font-medium">
+                    <RefreshCw size={14} className="animate-spin" />
+                    {pendingAnalysis ? 'AI analysis in progress...' : 'Loading analysis...'}
+                </div>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[0, 1, 2, 3].map(i => (
+                    <div key={i} className="bg-gray-900 border border-white/10 rounded-2xl p-5 h-32 flex items-center gap-4">
+                        <div className="w-24 h-24 rounded-full bg-gray-800 flex-shrink-0" />
+                        <div className="space-y-2 flex-1">
+                            <div className="h-4 w-24 bg-gray-800 rounded" />
+                            <div className="h-3 w-16 bg-gray-800 rounded" />
+                        </div>
+                    </div>
+                ))}
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 h-64" />
+                <div className="bg-gray-900 border border-white/10 rounded-2xl p-6 lg:col-span-2 h-64" />
+            </div>
+        </div>
+    );
 
     if (error || !analysis || !resume) return (
         <div className="p-10 text-center">
@@ -276,6 +357,44 @@ export default function AnalysisPage() {
     const { openAIResult, nlpResult } = analysis;
     const cats = categorizeSkills(nlpResult.extractedSkills);
 
+    // ─── BUG 2 FIX: JD awareness ───
+    const hasJD = Boolean(analysis.jobDescriptionText?.trim());
+
+    // ─── BUG 1 FIX: Compute real scores with fallbacks ───
+    const formattingScore = formattingCriteria?.score ?? 0;
+    const keywordScore = hasJD
+        ? Math.round(((nlpResult?.matchedSkills?.length || 0) / Math.max(1, (nlpResult?.matchedSkills?.length || 0) + (nlpResult?.missingSkills?.length || 0))) * 25)
+        : Math.min(25, Math.round(((nlpResult?.extractedSkills?.length || 0) / 15) * 25));
+
+    // If openAIResult exists, use it; otherwise compute from breakdown components
+    const computedAtsFromBreakdown = keywordScore + formattingScore + sectionCompleteness + quantifiedScore;
+
+    // Fallback quality score: weight readability, action verb ratio, and quantification differently from ATS
+    const fallbackQuality = (() => {
+        if (!readability) return Math.min(100, computedAtsFromBreakdown);
+        const actionVerbRatio = readability.totalBullets > 0
+            ? readability.actionVerbCount / readability.totalBullets
+            : 0;
+        const passivePenalty = Math.min(20, readability.passiveBullets.length * 5);
+        const quantBonus = quantifiedTotal > 0 ? Math.min(25, Math.round((quantifiedCount / quantifiedTotal) * 30)) : 0;
+        const verbScore = Math.round(actionVerbRatio * 30);
+        const baseQuality = 40 + verbScore + quantBonus - passivePenalty;
+        return Math.max(10, Math.min(100, baseQuality));
+    })();
+
+    const atsScore = openAIResult?.atsScore ?? computedAtsFromBreakdown;
+    const qualityScore = openAIResult?.qualityScore ?? fallbackQuality;
+
+    // BUG 2 FIX: overall score must NOT penalize when no JD
+    const overallScore = openAIResult?.overallScore
+        ? (hasJD
+            ? openAIResult.overallScore
+            : Math.round((atsScore * 0.5) + (qualityScore * 0.5)))  // no JD: equal weight ATS + Quality
+        : Math.round((atsScore * 0.4) + (qualityScore * 0.6));
+
+    // BUG 2 FIX: JD Match score and label
+    const jdMatchScore = hasJD ? (nlpResult?.similarityScore ?? 0) : 0;
+
     const timeAgo = (dateStr: string) => {
         const h = Math.floor((Date.now() - new Date(dateStr).getTime()) / 3600000);
         if (h < 1) return 'Just now';
@@ -284,6 +403,20 @@ export default function AnalysisPage() {
     };
 
     const getColor = (score: number) => score >= 70 ? 'text-emerald-500' : score >= 50 ? 'text-amber-500' : 'text-rose-500';
+
+    // BUG 1 + BUG 2 FIX: score ring items with proper labels
+    const scoreItems = [
+        { label: 'ATS Score', score: atsScore, icon: Target, noJD: false },
+        { label: 'Quality Score', score: qualityScore, icon: Star, noJD: false },
+        { label: 'Overall Score', score: overallScore, icon: Award, noJD: false },
+        { label: 'JD Match', score: jdMatchScore, icon: GitCompare, noJD: !hasJD },
+    ];
+
+    // BUG 4: quantification percentage from real data
+    const quantPct = quantifiedTotal > 0 ? Math.round((quantifiedCount / quantifiedTotal) * 100) : 0;
+
+    // BUG 7: filtered keyword density
+    const filteredKeywords = filterKeywordDensity(nlpResult.keywordDensity || {});
 
     return (
         <div className="w-full h-full bg-gray-950 overflow-y-auto">
@@ -310,19 +443,14 @@ export default function AnalysisPage() {
 
             <div className="max-w-[1600px] mx-auto p-4 md:p-6 lg:p-8 space-y-6 pb-24 text-gray-200">
                 
-                {/* Section 2 - Score Overview Strip */}
+                {/* Section 2 - Score Overview Strip — BUG 1 + BUG 2 FIX */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[
-                        { label: 'ATS Score', score: openAIResult?.atsScore || 0, icon: Target },
-                        { label: 'Quality Score', score: openAIResult?.qualityScore || 0, icon: Star },
-                        { label: 'Overall Score', score: openAIResult?.overallScore || 0, icon: Award },
-                        { label: 'JD Match', score: nlpResult?.similarityScore || 0, icon: GitCompare }
-                    ].map((item, i) => {
-                        const col = getColor(item.score);
-                        const status = item.score >= 70 ? 'Excellent' : item.score >= 50 ? 'Good' : 'Needs Work';
+                    {scoreItems.map((item, i) => {
+                        const col = item.noJD ? 'text-gray-500' : getColor(item.score);
+                        const status = item.noJD ? 'No JD Provided' : item.score >= 70 ? 'Excellent' : item.score >= 50 ? 'Good' : 'Needs Work';
                         return (
                             <motion.div key={item.label} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.1 }} className="bg-gray-900 border border-white/10 rounded-2xl p-5 flex items-center gap-4">
-                                <CircularProgress score={item.score} colorClass={col} icon={item.icon} />
+                                <CircularProgress score={item.noJD ? 0 : item.score} colorClass={col} icon={item.icon} />
                                 <div>
                                     <h3 className="text-sm font-medium text-gray-400">{item.label}</h3>
                                     <p className={`text-xs mt-1 ${col}`}>{status}</p>
@@ -343,16 +471,25 @@ export default function AnalysisPage() {
                     </motion.div>
                 )}
 
+                {/* BUG 1: "openAIResult missing" info banner */}
+                {!openAIResult && (
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-5 flex items-start gap-3">
+                        <Info size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                            <p className="text-sm text-amber-200 font-medium">AI scoring was unavailable for this analysis.</p>
+                            <p className="text-xs text-gray-400 mt-1">Scores are computed from local metrics only. Re-analyze for full AI-powered scoring.</p>
+                        </div>
+                    </motion.div>
+                )}
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Section 3 - ATS Score Breakdown */}
+                    {/* Section 3 - ATS Score Breakdown — BUG 1 + BUG 6 FIX */}
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-gray-900 border border-white/10 rounded-2xl p-6 lg:col-span-1 flex flex-col">
                         <h2 className="text-lg font-bold text-white mb-6">ATS Score Breakdown</h2>
                         <div className="space-y-5 flex-1 flex flex-col justify-center">
                             {[
-                                { label: 'Keyword Match', score: analysis.jobDescriptionText 
-                                    ? Math.round(((nlpResult?.matchedSkills?.length || 0) / Math.max(1, (nlpResult?.matchedSkills?.length || 0) + (nlpResult?.missingSkills?.length || 0))) * 25)
-                                    : Math.min(25, Math.round(((nlpResult?.extractedSkills?.length || 0) / 15) * 25)) },
-                                { label: 'Formatting', score: Math.min(25, Math.round(((openAIResult?.atsScore || 0) / 100) * 25)) },
+                                { label: 'Keyword Match', score: keywordScore },
+                                { label: 'Formatting', score: formattingScore },
                                 { label: 'Section Completeness', score: sectionCompleteness },
                                 { label: 'Quantified Impact', score: quantifiedScore },
                             ].map(item => (
@@ -367,6 +504,32 @@ export default function AnalysisPage() {
                                 </div>
                             ))}
                         </div>
+
+                        {/* BUG 6 FIX: Formatting Details collapsible */}
+                        {formattingCriteria && (
+                            <div className="mt-4 border-t border-white/5 pt-4">
+                                <button onClick={() => setShowFormattingDetails(!showFormattingDetails)} className="flex items-center gap-2 text-xs text-gray-400 hover:text-amber-400 transition-colors w-full">
+                                    {showFormattingDetails ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                    <span>Formatting Details</span>
+                                </button>
+                                {showFormattingDetails && (
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="mt-3 space-y-2">
+                                        {formattingCriteria.breakdown.map((c, i) => (
+                                            <div key={i} className="flex items-start gap-2 text-xs">
+                                                {c.passed
+                                                    ? <CheckCircle2 size={14} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+                                                    : <XCircle size={14} className="text-rose-500 flex-shrink-0 mt-0.5" />
+                                                }
+                                                <div>
+                                                    <span className={c.passed ? 'text-emerald-300' : 'text-rose-300'}>{c.label}</span>
+                                                    <p className="text-gray-500 mt-0.5">{c.detail}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </div>
+                        )}
                     </motion.div>
 
                     {/* Section 4 - Resume Section Completeness Checker */}
@@ -392,7 +555,7 @@ export default function AnalysisPage() {
                     </motion.div>
                 </div>
 
-                {/* Section 5 - Quantification Score */}
+                {/* Section 5 - Quantification Score — BUG 4 FIX */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="bg-gray-900 border border-white/10 rounded-2xl p-6">
                     <div className="mb-6">
                         <h2 className="text-lg font-bold text-white">Bullet Point Quantification</h2>
@@ -401,15 +564,18 @@ export default function AnalysisPage() {
                     <div className="flex flex-col md:flex-row items-center gap-6 mb-6 p-5 bg-gray-950 border border-white/5 rounded-xl">
                         <div className="flex-1 w-full">
                             <div className="flex items-center justify-between text-sm mb-3">
-                                <span className="text-gray-300">Quantified: <span className="text-amber-400 font-bold">{Math.round((quantifiedScore / 25) * (openAIResult?.bulletImpactScores?.length || 1))}</span> / {openAIResult?.bulletImpactScores?.length || 1} bullets</span>
-                                <span className="font-bold text-amber-500">{Math.round(quantifiedScore * 4)}%</span>
+                                <span className="text-gray-300">Quantified: <span className="text-amber-400 font-bold">{quantifiedCount}</span> / {quantifiedTotal} bullets</span>
+                                <span className="font-bold text-amber-500">{quantPct}%</span>
                             </div>
                             <div className="w-full bg-gray-800 h-2.5 rounded-full overflow-hidden">
-                                <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round(quantifiedScore * 4)}%` }} transition={{ duration: 1 }} className="h-full bg-amber-500 rounded-full" />
+                                <motion.div initial={{ width: 0 }} animate={{ width: `${quantPct}%` }} transition={{ duration: 1 }} className="h-full bg-amber-500 rounded-full" />
                             </div>
                         </div>
                         <div className="flex-shrink-0 text-sm bg-amber-500/10 text-amber-400 border border-amber-500/20 px-4 py-2 rounded-lg flex items-center gap-2">
-                            <AlertTriangle size={16} /> Add metrics to reach 80% (top 10% of applicants)
+                            {quantPct >= 80
+                                ? <><CheckCircle2 size={16} /> Great quantification!</>
+                                : <><AlertTriangle size={16} /> Add metrics to reach 80% (top 10% of applicants)</>
+                            }
                         </div>
                     </div>
                 </motion.div>
@@ -423,7 +589,7 @@ export default function AnalysisPage() {
                             <div className="flex flex-wrap gap-2 mb-4 flex-1 content-start">
                                 {nlpResult?.matchedSkills?.length > 0 ? nlpResult.matchedSkills.map(s => (
                                     <span key={s} className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-medium">{s}</span>
-                                )) : <span className="text-xs text-gray-500">{analysis.jobDescriptionText ? 'No matches found against the JD.' : 'No Job Description provided to match against.'}</span>}
+                                )) : <span className="text-xs text-gray-500">{hasJD ? 'No matches found against the JD.' : 'No Job Description provided to match against.'}</span>}
                             </div>
                             <div className="mt-auto pt-4 border-t border-emerald-500/10">
                                 <p className="text-xs text-gray-400 flex justify-between mb-2"><span>Match Ratio</span> {nlpResult?.matchedSkills?.length || 0}/{(nlpResult?.matchedSkills?.length || 0) + (nlpResult?.missingSkills?.length || 0)}</p>
@@ -436,7 +602,7 @@ export default function AnalysisPage() {
                             <div className="flex flex-wrap gap-2 mb-4 flex-1 content-start">
                                 {nlpResult?.missingSkills?.length > 0 ? nlpResult.missingSkills.map(s => (
                                     <span key={s} className="px-2.5 py-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-lg text-xs font-medium">{s}</span>
-                                )) : <span className="text-xs text-gray-500">{analysis.jobDescriptionText ? 'Perfect! No skills missing based on JD.' : 'No Job Description provided.'}</span>}
+                                )) : <span className="text-xs text-gray-500">{hasJD ? 'Perfect! No skills missing based on JD.' : 'No Job Description provided.'}</span>}
                             </div>
                             <div className="mt-auto pt-4 border-t border-rose-500/10">
                                 <p className="text-xs text-gray-400 flex justify-between mb-2"><span>Gap Identifier</span> {nlpResult?.missingSkills?.length || 0} skills to close</p>
@@ -478,65 +644,87 @@ export default function AnalysisPage() {
                     </div>
                 </motion.div>
 
-                {/* Section 7 - Keyword Density */}
+                {/* Section 7 - Keyword Density — BUG 7 FIX: filtered + JD-aware subtitle */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-gray-900 border border-white/10 rounded-2xl p-6">
                     <div className="mb-6">
                         <h2 className="text-lg font-bold text-white">Keyword Density</h2>
-                        <p className="text-sm text-gray-500">How often key terms appear vs what the JD expects</p>
+                        <p className="text-sm text-gray-500">
+                            {hasJD ? 'How often key terms appear vs what the JD expects' : 'Top keywords found in your resume'}
+                        </p>
                     </div>
                     <div className="flex flex-wrap gap-3">
-                        {Object.entries(nlpResult.keywordDensity).sort((a,b) => b[1] - a[1]).map(([kw, count]) => {
-                            const cClass = count >= 5 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : count >= 2 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30';
-                            return (
-                                <div key={kw} title={`Appears ${count} times in your resume`} className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 cursor-help transition-colors hover:bg-opacity-80 ${cClass}`}>
-                                    <span className="text-sm font-medium">{kw}</span>
-                                    <span className="text-xs opacity-70">×{count}</span>
-                                </div>
-                            );
-                        })}
+                        {Object.entries(filteredKeywords).length > 0
+                            ? Object.entries(filteredKeywords).sort((a,b) => b[1] - a[1]).map(([kw, count]) => {
+                                const isPct = !Number.isInteger(count) && count <= 25;
+                                const cClass = isPct
+                                    ? (count >= 1.5 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : count >= 1.0 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30')
+                                    : (count >= 5 ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : count >= 2 ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-blue-500/20 text-blue-300 border-blue-500/30');
+                                return (
+                                    <div key={kw} title={isPct ? `${count}% keyword share in your resume` : `Appears ${count} times in your resume`} className={`px-3 py-1.5 rounded-xl border flex items-center gap-2 cursor-help transition-colors hover:bg-opacity-80 ${cClass}`}>
+                                        <span className="text-sm font-medium">{kw}</span>
+                                        <span className="text-xs opacity-70">{isPct ? `${count}%` : `×${count}`}</span>
+                                    </div>
+                                );
+                            })
+                            : <p className="text-xs text-gray-500">No significant keywords detected.</p>
+                        }
                     </div>
                 </motion.div>
 
-                {/* Section 8 - Bullet Point Optimizer */}
+                {/* Section 8 - Bullet Point Optimizer — BUG 4 FIX: empty state */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="bg-gray-900 border border-white/10 rounded-2xl p-6">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
                         <div>
                             <h2 className="text-lg font-bold text-white">Bullet Point Optimizer</h2>
                             <p className="text-sm text-gray-500">AI-suggested rewrites for maximum impact and quantifiable results</p>
                         </div>
-                        <button onClick={handleDownloadDocx} disabled={generatingDoc} className="w-full md:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-400 transition-colors text-black font-semibold rounded-xl flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.15)] disabled:opacity-50">
-                            <Sparkles size={16} /> Apply All Rewrites & Download
-                        </button>
+                        {(openAIResult?.bulletImpactScores?.filter(b => b.rewritten && b.bullet).length ?? 0) > 0 && (
+                            <button onClick={handleDownloadDocx} disabled={generatingDoc} className="w-full md:w-auto px-5 py-2.5 bg-amber-500 hover:bg-amber-400 transition-colors text-black font-semibold rounded-xl flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(245,158,11,0.15)] disabled:opacity-50">
+                                <Sparkles size={16} /> Apply All Rewrites & Download
+                            </button>
+                        )}
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {openAIResult?.bulletImpactScores?.filter(b => b.rewritten && b.bullet).map((b, i) => (
-                            <div key={i} className="bg-gray-950 border border-white/10 rounded-xl p-5 flex flex-col relative group">
-                                <div className="flex justify-between items-center mb-3">
-                                    <span className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Original</span>
-                                    <span className="text-xs font-medium text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">Impact: {b.score}/10</span>
-                                </div>
-                                <p className="text-sm text-gray-400 line-through mb-4 leading-relaxed">{b.bullet}</p>
-                                
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-gray-900 border border-amber-500/30 text-amber-400 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1 shadow-xl">
-                                    <Sparkles size={10} /> AI Improved
-                                </div>
-                                
-                                <div className="flex-1 bg-amber-500/5 -mx-5 -mb-5 p-5 mt-2 border-t border-amber-500/20 rounded-b-xl">
+                    {(openAIResult?.bulletImpactScores?.filter(b => b.rewritten && b.bullet).length ?? 0) > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {openAIResult!.bulletImpactScores.filter(b => b.rewritten && b.bullet).map((b, i) => (
+                                <div key={i} className="bg-gray-950 border border-white/10 rounded-xl p-5 flex flex-col relative group">
                                     <div className="flex justify-between items-center mb-3">
-                                        <span className="text-xs font-semibold tracking-wider text-amber-500 uppercase">Rewritten</span>
-                                        <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded flex items-center gap-1">✨ Improved <Target size={10} /></span>
+                                        <span className="text-xs font-semibold tracking-wider text-gray-500 uppercase">Original</span>
+                                        <span className="text-xs font-medium text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">Impact: {b.score}/10</span>
                                     </div>
-                                    <p className="text-sm text-white leading-relaxed font-medium">{b.rewritten}</p>
+                                    <p className="text-sm text-gray-400 line-through mb-4 leading-relaxed">{b.bullet}</p>
+                                    
+                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-gray-900 border border-amber-500/30 text-amber-400 text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1 shadow-xl">
+                                        <Sparkles size={10} /> AI Improved
+                                    </div>
+                                    
+                                    <div className="flex-1 bg-amber-500/5 -mx-5 -mb-5 p-5 mt-2 border-t border-amber-500/20 rounded-b-xl">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <span className="text-xs font-semibold tracking-wider text-amber-500 uppercase">Rewritten</span>
+                                            <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded flex items-center gap-1">✨ Improved <Target size={10} /></span>
+                                        </div>
+                                        <p className="text-sm text-white leading-relaxed font-medium">{b.rewritten}</p>
+                                    </div>
+                                    
+                                    <button onClick={() => handleCopy(b.rewritten)} className="absolute bottom-4 right-4 bg-gray-900 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition-colors p-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center gap-1.5 text-xs font-semibold">
+                                        {copiedBullet === b.rewritten ? <Check size={14} /> : <Copy size={14} />} 
+                                        {copiedBullet === b.rewritten ? 'Copied' : 'Copy'}
+                                    </button>
                                 </div>
-                                
-                                <button onClick={() => handleCopy(b.rewritten)} className="absolute bottom-4 right-4 bg-gray-900 border border-amber-500/30 text-amber-400 hover:bg-amber-500 hover:text-black transition-colors p-2 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 focus:opacity-100 flex items-center gap-1.5 text-xs font-semibold">
-                                    {copiedBullet === b.rewritten ? <Check size={14} /> : <Copy size={14} />} 
-                                    {copiedBullet === b.rewritten ? 'Copied' : 'Copy'}
-                                </button>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        /* BUG 4 FIX: empty state for bullet optimizer */
+                        <div className="text-center py-10 bg-gray-950 border border-white/5 rounded-xl">
+                            <Sparkles size={32} className="mx-auto text-gray-600 mb-3" />
+                            <p className="text-sm text-gray-400 mb-2">No bullet rewrites available yet.</p>
+                            <p className="text-xs text-gray-500 mb-4">This can happen if the AI scoring step timed out or is still processing.</p>
+                            <button onClick={handleReanalyze} className="px-4 py-2 border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 rounded-xl text-sm font-semibold transition-colors">
+                                <RefreshCw size={14} className="inline mr-2" /> Re-analyze to generate rewrites
+                            </button>
+                        </div>
+                    )}
                 </motion.div>
 
                 {/* Section 9 - Readability Analysis */}
@@ -574,16 +762,22 @@ export default function AnalysisPage() {
                     </motion.div>
                 )}
 
-                {/* Section 10 - Strengths & Weaknesses */}
+                {/* Section 10 - Strengths & Weaknesses — BUG 7 FIX: empty state fallbacks */}
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="bg-gray-900 border border-white/10 rounded-2xl p-6">
                         <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><CheckCircle2 className="text-emerald-500" /> Positive Signals</h2>
                         <div className="space-y-3">
-                            {openAIResult?.strengths?.map((s, i) => (
-                                <div key={i} className="p-4 bg-emerald-500/5 border-l-2 border-emerald-500 rounded-r-xl">
-                                    <p className="text-sm text-emerald-100">{s}</p>
+                            {openAIResult?.strengths && openAIResult.strengths.length > 0 ? (
+                                openAIResult.strengths.map((s, i) => (
+                                    <div key={i} className="p-4 bg-emerald-500/5 border-l-2 border-emerald-500 rounded-r-xl">
+                                        <p className="text-sm text-emerald-100">{s}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-4 bg-gray-950 border border-white/5 rounded-xl text-center">
+                                    <p className="text-xs text-gray-500 italic">No positive signals detected yet. Re-analyze with a job description for personalized feedback.</p>
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </div>
                     
@@ -591,28 +785,40 @@ export default function AnalysisPage() {
                         <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
                         <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2"><AlertTriangle className="text-rose-500" /> Critical FAANG Deductions</h2>
                         <div className="space-y-3 flex-1 mb-6">
-                            {(openAIResult?.weaknesses || []).map((w, i) => (
-                                <div key={i} className="flex items-start gap-3 p-3 bg-rose-500/5 border border-rose-500/10 rounded-xl">
-                                    <span className="flex-shrink-0 mt-0.5"><XCircle size={16} className="text-rose-500" /></span>
-                                    <p className="text-sm text-rose-200">{w}</p>
+                            {(openAIResult?.weaknesses?.length ?? 0) > 0 ? (
+                                openAIResult!.weaknesses.map((w, i) => (
+                                    <div key={i} className="flex items-start gap-3 p-3 bg-rose-500/5 border border-rose-500/10 rounded-xl">
+                                        <span className="flex-shrink-0 mt-0.5"><XCircle size={16} className="text-rose-500" /></span>
+                                        <p className="text-sm text-rose-200">{w}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-4 bg-gray-950 border border-white/5 rounded-xl text-center">
+                                    <p className="text-xs text-gray-500 italic">No critical deductions found. Re-analyze for a detailed assessment.</p>
                                 </div>
-                            ))}
+                            )}
                         </div>
                         
                         <h3 className="text-xs font-bold text-amber-500 uppercase tracking-widest mb-3 border-t border-white/5 pt-4">Required Fixes</h3>
                         <div className="space-y-3">
-                            {(openAIResult?.improvements || []).map((imp, i) => (
-                                <div key={i} className="flex items-center gap-3 p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl">
-                                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">{i+1}</span>
-                                    <p className="text-sm text-amber-100">{imp}</p>
+                            {(openAIResult?.improvements?.length ?? 0) > 0 ? (
+                                openAIResult!.improvements.map((imp, i) => (
+                                    <div key={i} className="flex items-center gap-3 p-3 bg-amber-500/5 border border-amber-500/10 rounded-xl">
+                                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold">{i+1}</span>
+                                        <p className="text-sm text-amber-100">{imp}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="p-3 bg-gray-950 border border-white/5 rounded-xl text-center">
+                                    <p className="text-xs text-gray-500 italic">No specific fixes identified yet.</p>
                                 </div>
-                            ))}
+                            )}
                         </div>
                     </div>
                 </motion.div>
 
-                {/* Section 11 - JD Match View */}
-                {nlpResult.similarityScore && (
+                {/* Section 11 - JD Match View — BUG 7 FIX: no stray "0" + BUG 2 FIX: proper no-JD handling */}
+                {hasJD && (nlpResult?.similarityScore ?? 0) > 0 && (
                     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }} className="bg-gray-900 border border-white/10 rounded-2xl p-6 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 blur-3xl -mr-20 -mt-20 pointer-events-none" />
                         <div className="mb-8 text-center md:text-left">
@@ -624,7 +830,10 @@ export default function AnalysisPage() {
                             <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-2xl p-6 h-full text-center">
                                 <h3 className="text-emerald-400 font-bold mb-4 flex items-center justify-center gap-2"><CheckCircle2 size={18} /> Matched Keywords</h3>
                                 <div className="flex flex-wrap gap-2 justify-center">
-                                    {nlpResult.matchedSkills.map(s => <span key={s} className="px-3 py-1 bg-emerald-500/10 text-emerald-300 rounded-lg text-sm">{s}</span>)}
+                                    {nlpResult.matchedSkills.length > 0
+                                        ? nlpResult.matchedSkills.map(s => <span key={s} className="px-3 py-1 bg-emerald-500/10 text-emerald-300 rounded-lg text-sm">{s}</span>)
+                                        : <span className="text-xs text-gray-500">No matched keywords found.</span>
+                                    }
                                 </div>
                             </div>
                             
@@ -635,7 +844,10 @@ export default function AnalysisPage() {
                             <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-6 h-full text-center">
                                 <h3 className="text-rose-400 font-bold mb-4 flex items-center justify-center gap-2"><XCircle size={18} /> Missing Keywords</h3>
                                 <div className="flex flex-wrap gap-2 justify-center">
-                                    {nlpResult.missingSkills.map(s => <span key={s} className="px-3 py-1 bg-rose-500/10 text-rose-300 rounded-lg text-sm">{s}</span>)}
+                                    {nlpResult.missingSkills.length > 0
+                                        ? nlpResult.missingSkills.map(s => <span key={s} className="px-3 py-1 bg-rose-500/10 text-rose-300 rounded-lg text-sm">{s}</span>)
+                                        : <span className="text-xs text-gray-500">No missing keywords — great match!</span>
+                                    }
                                 </div>
                             </div>
                         </div>

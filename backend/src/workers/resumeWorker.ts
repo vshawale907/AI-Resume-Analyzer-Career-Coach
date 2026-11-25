@@ -42,6 +42,14 @@ export const startResumeWorker = (): Worker => {
             let openAIResult = null;
             try {
                 openAIResult = await scoreResume(resume.cleanedText, nlpResult, jobDescriptionText);
+
+                // BUG 2 FIX: When no JD is provided, recalculate overallScore
+                // so the resume is not penalized for missing JD keywords
+                if (openAIResult && !jobDescriptionText) {
+                    const ats = openAIResult.atsScore ?? 0;
+                    const quality = openAIResult.qualityScore ?? 0;
+                    openAIResult.overallScore = Math.round((ats * 0.5) + (quality * 0.5));
+                }
             } catch (err) {
                 logger.error(`[Worker] AI scoring failed for ${resumeId}:`, err);
                 // Continue with NLP-only data — don't fail the whole job

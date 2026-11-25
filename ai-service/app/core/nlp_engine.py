@@ -14,29 +14,80 @@ try:
 except LookupError:
     logger.error("NLTK data not found in NLTK_DATA path. Ensure it is downloaded in the Dockerfile.")
 
+# ─── BUG 5 FIX: Massively expanded skill taxonomy ─────────────────────
 TECH_SKILLS = {
     # Languages
     "python", "javascript", "typescript", "java", "c++", "c#", "go", "rust", "ruby",
-    "swift", "kotlin", "scala", "r", "matlab", "php", "dart", "elixir",
+    "swift", "kotlin", "scala", "r", "matlab", "php", "dart", "elixir", "haskell",
+    "clojure", "bash", "shell", "powershell", "sql", "html", "css", "solidity",
+    "perl", "lua", "objective-c", "groovy", "f#",
     # Frontend
-    "react", "vue", "angular", "svelte", "nextjs", "nuxtjs", "redux", "zustand",
-    "html", "css", "tailwindcss", "sass", "webpack", "vite",
+    "react", "vue", "angular", "svelte", "nextjs", "nuxtjs", "gatsby", "remix",
+    "redux", "zustand", "mobx", "recoil", "jotai",
+    "html", "css", "tailwindcss", "sass", "scss", "less", "styled-components",
+    "webpack", "vite", "rollup", "parcel", "esbuild", "turbopack",
+    "storybook", "chromatic",
     # Backend
-    "nodejs", "express", "fastapi", "django", "flask", "spring", "rails",
-    "graphql", "rest api", "grpc", "websocket",
+    "nodejs", "express", "fastapi", "django", "flask", "spring", "spring boot",
+    "rails", "laravel", "nestjs", "koa", "hapi", "fiber", "gin", "echo", "actix",
+    "graphql", "rest api", "grpc", "websocket", "trpc", "bcrypt", "joi",
     # Databases
     "mongodb", "postgresql", "mysql", "redis", "elasticsearch", "sqlite",
-    "dynamodb", "cassandra", "neo4j", "pinecone",
+    "dynamodb", "cassandra", "neo4j", "pinecone", "qdrant", "weaviate", "milvus",
+    "chroma", "couchdb", "firebase", "supabase", "planetscale", "cockroachdb",
+    "influxdb", "clickhouse", "opensearch", "memcached", "mariadb",
+    # ORMs & Query Builders
+    "prisma", "typeorm", "sequelize", "sqlalchemy", "drizzle", "knex",
     # Cloud & DevOps
-    "aws", "gcp", "azure", "docker", "kubernetes", "terraform", "ansible",
-    "ci/cd", "github actions", "jenkins", "nginx", "linux",
+    "aws", "aws s3", "s3", "gcp", "azure", "docker", "kubernetes", "terraform", "ansible", "pulumi",
+    "ci/cd", "github actions", "gitlab ci", "jenkins", "circleci", "travisci",
+    "nginx", "apache", "linux", "unix",
+    "heroku", "vercel", "netlify", "cloudflare", "railway", "render", "fly.io",
+    "vagrant", "packer", "consul", "vault", "nomad",
+    "helm", "istio", "envoy", "argocd", "fluxcd",
+    # Monitoring & Observability
+    "datadog", "grafana", "prometheus", "sentry", "newrelic", "splunk",
+    "sonarqube", "pagerduty", "elk stack", "jaeger", "zipkin",
     # AI/ML
     "machine learning", "deep learning", "nlp", "computer vision", "tensorflow",
-    "pytorch", "scikit-learn", "openai", "langchain", "llm", "transformers",
-    "pandas", "numpy", "matplotlib", "hugging face",
-    # Other
-    "git", "agile", "scrum", "microservices", "system design", "data structures",
-    "algorithms", "kafka", "rabbitmq", "stripe", "oauth",
+    "pytorch", "scikit-learn", "openai", "langchain", "langgraph", "llm", "transformers",
+    "pandas", "numpy", "matplotlib", "hugging face", "rag", "text-to-sql", "embeddings", "tf-idf",
+    "spacy", "nltk", "keras", "xgboost", "lightgbm", "catboost",
+    "stable diffusion", "diffusion models", "reinforcement learning",
+    "bert", "gpt", "llama", "mistral", "claude",
+    "opencv", "yolo", "detectron",
+    "mlflow", "wandb", "dvc", "kubeflow", "sagemaker",
+    # Message Queues & Streaming
+    "kafka", "rabbitmq", "bullmq", "bull", "celery", "nats", "zeromq",
+    "apache spark", "apache flink", "apache beam",
+    # Testing
+    "jest", "mocha", "chai", "jasmine", "cypress", "playwright", "selenium",
+    "vitest", "pytest", "junit", "testng", "rspec", "enzyme",
+    "testing library", "k6", "postman", "supertest", "artillery",
+    # Version Control & Collaboration
+    "git", "github", "gitlab", "bitbucket",
+    "jira", "confluence", "notion", "trello", "asana", "linear",
+    # Design
+    "figma", "sketch", "adobe xd", "invision", "zeplin",
+    # Payment & Communication APIs
+    "stripe", "twilio", "sendgrid", "plaid", "braintree",
+    # Auth
+    "oauth", "oauth2", "jwt", "auth0", "okta", "cognito", "firebase auth",
+    # Architecture & Concepts
+    "microservices", "system design", "data structures", "algorithms", "dsa", "oop", "dbms",
+    "event-driven", "domain-driven design", "cqrs", "event sourcing",
+    "serverless", "lambda", "cloud functions",
+    "api gateway", "load balancing", "caching", "cdn",
+    "rest", "soap", "graphql", "websocket",
+    # Web3 / Blockchain
+    "web3", "ethereum", "ethers.js", "erc-721", "erc-1155", "hardhat", "truffle", "ipfs", "pinata", "polygon", "chainlink",
+    # Methodology
+    "agile", "scrum", "kanban", "devops", "sre", "tdd", "bdd", "pair programming",
+    # Other Tools
+    "swagger", "openapi",
+    "postman", "insomnia",
+    "vscode", "intellij", "vim", "neovim",
+    "make", "cmake", "bazel",
 }
 
 SOFT_SKILLS = {
@@ -45,6 +96,7 @@ SOFT_SKILLS = {
     "project management", "attention to detail", "analytical", "strategic thinking",
     "decision making", "conflict resolution", "negotiation", "presentation",
     "emotional intelligence", "self-motivated", "organized",
+    "stakeholder management", "cross-functional", "agile mindset",
 }
 
 ACTION_VERBS = {
@@ -53,8 +105,14 @@ ACTION_VERBS = {
     "increased", "launched", "led", "managed", "optimized", "reduced", "scaled",
     "shipped", "solved", "streamlined", "transformed", "architected", "deployed",
     "automated", "collaborated", "contributed", "coordinated", "facilitated",
+    "mentored", "directed", "orchestrated", "championed", "spearheaded",
+    "refactored", "modernized", "integrated", "migrated", "configured",
+    "resolved", "accelerated", "maximized", "minimized", "maintained",
+    "planned", "produced", "rebuilt", "researched", "reviewed", "revised",
+    "simplified", "supported", "tracked", "upgraded", "validated",
 }
 
+# ─── BUG 5 FIX: Expanded alias map matching frontend ─────────────────
 SKILL_ALIASES = {
     "machine learning": ["ml", "machinelearning"],
     "deep learning": ["dl", "deeplearning"],
@@ -67,12 +125,52 @@ SKILL_ALIASES = {
     "react": ["react.js", "reactjs", "react js"],
     "nodejs": ["node.js", "node js", "node"],
     "vue": ["vue.js", "vuejs", "vue js"],
+    "nextjs": ["next.js", "next js"],
     "postgresql": ["postgres", "psql"],
     "kubernetes": ["k8s"],
-    "ci/cd": ["ci", "cd", "ci-cd"],
+    "ci/cd": ["ci", "cd", "ci-cd", "cicd"],
     "user interface": ["ui"],
     "user experience": ["ux"],
+    "mongodb": ["mongo"],
+    "tailwindcss": ["tailwind css", "tailwind"],
+    "sass": ["scss"],
+    "graphql": ["graph ql"],
+    "scikit-learn": ["sklearn", "scikit learn"],
+    "fastapi": ["fast api"],
+    "spring boot": ["springboot"],
+    "express": ["expressjs", "express.js"],
+    "nestjs": ["nest.js", "nest js"],
+    "elasticsearch": ["elastic search"],
+    "opensearch": ["open search"],
+    "rest api": ["rest", "restful", "restful api"],
+    "microservices": ["micro services", "micro-services"],
+    "github actions": ["gh actions"],
+    "gitlab ci": ["gitlabci"],
+    "docker": ["dockerfile", "docker-compose"],
+    "pytorch": ["torch"],
+    "tensorflow": ["tf2", "tf1"],
+    "langchain": ["lang chain"],
+    "langgraph": ["lang graph"],
+    "bullmq": ["bull mq"],
+    "rabbitmq": ["rabbit mq"],
+    "redis": ["redis cache"],
+    "jwt": ["json web token"],
+    "oauth": ["oauth2"],
+    "prisma": ["prisma orm"],
+    "typeorm": ["type orm"],
+    "sequelize": ["sequelizejs"],
+    "web3": ["web3.js", "web3js"],
+    "ethers.js": ["ethersjs", "ethers"],
+    "websocket": ["websockets"],
+    "linux": ["ubuntu", "debian", "centos"],
 }
+
+# Reverse alias map for normalization: alias -> canonical name
+_ALIAS_TO_CANONICAL = {}
+for canonical, aliases in SKILL_ALIASES.items():
+    for alias in aliases:
+        _ALIAS_TO_CANONICAL[alias.lower()] = canonical
+
 
 class NLPEngine:
     _instance: Optional["NLPEngine"] = None
@@ -103,6 +201,12 @@ class NLPEngine:
     def clean_text(self, text: str) -> str:
         # Normalize unicode
         text = unicodedata.normalize("NFKD", text)
+        # Split glued PDF category prefixes (e.g. "LanguagesPython", "BackendFastAPI", "OtherGit")
+        text = re.sub(
+            r"\b(Languages|GenAI\s*&\s*LLM|Backend|Databases|DevOps\s*&\s*Cloud|Fundamentals|Other|Technical\s*Skills|Frontend|Tools|Frameworks)(?=[A-Z])",
+            r"\1 ",
+            text,
+        )
         # Remove URLs
         text = re.sub(r"https?://\S+|www\.\S+", " ", text)
         # Remove email addresses
@@ -141,7 +245,17 @@ class NLPEngine:
                     return True
             return False
 
-        tech = sorted([s for s in TECH_SKILLS if is_match(s)])
+        # BUG 5 FIX: Return canonical (normalized) names
+        tech_raw = sorted([s for s in TECH_SKILLS if is_match(s)])
+        # Normalize: map to canonical forms where aliases exist
+        tech = []
+        seen = set()
+        for s in tech_raw:
+            canonical = _ALIAS_TO_CANONICAL.get(s.lower(), s)
+            if canonical.lower() not in seen:
+                seen.add(canonical.lower())
+                tech.append(canonical)
+
         soft = sorted([s for s in SOFT_SKILLS if is_match(s)])
         return tech, soft
 
@@ -165,7 +279,7 @@ class NLPEngine:
         total = 0
 
         months_regex = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
-        year_regex = r"(?:20\d{2}|['‘’]\d{2})"
+        year_regex = r"(?:20\d{2}|[''']\d{2})"
         date_expr = rf"(?:{months_regex}\s*)?{year_regex}"
         
         range_pattern = rf"({date_expr})\s*(?:[-–]|to|until)\s*({date_expr}|present|current|now)"
@@ -177,7 +291,7 @@ class NLPEngine:
                 return current_year
             m4 = re.search(r"\b(20\d{2})\b", s)
             if m4: return int(m4.group(1))
-            m2 = re.search(r"['‘’](\d{2})\b", s)
+            m2 = re.search(r"['''](\d{2})\b", s)
             if m2: return 2000 + int(m2.group(1))
             return 0
 
@@ -215,7 +329,14 @@ class NLPEngine:
             logger.error("NLTK stopwords not found. This should be handled in the Dockerfile.")
             stops = set() # Fallback to empty to avoid crash
 
-        meaningful = [t for t in tokens if t not in stops and len(t) > 2]
+        generic_noise = {
+            "built", "text", "multi", "document", "using", "used", "added",
+            "make", "made", "data", "new", "set", "get", "use", "help", "way",
+            "based", "work", "let", "tool", "via", "per", "each", "resume",
+            "project", "projects", "experience", "summary", "skills", "education",
+            "certifications", "achievements", "other", "fundamentals",
+        }
+        meaningful = [t for t in tokens if t not in stops and t not in generic_noise and len(t) > 2]
         counter = Counter(meaningful)
         total = sum(counter.values()) or 1
         top = counter.most_common(top_n)
@@ -240,21 +361,49 @@ class NLPEngine:
         return entities
 
     def calculate_quantification(self, text: str) -> tuple[float, int]:
-        # Identify bullet points or lines that look like achievements
-        lines = [l.strip() for l in text.split('\n') if len(l.strip()) > 15]
+        # Merge orphaned bullet markers ("•\n...") and wrapped bullet lines
+        raw_lines = [l.strip() for l in text.split('\n')]
+        merged = []
+        i = 0
+        while i < len(raw_lines):
+            line = raw_lines[i]
+            if not line:
+                i += 1
+                continue
+            if re.match(r"^[•\-\*–—▪◦⦿➤►\u2022\u25CF\u25AA\u2023]$", line):
+                if i + 1 < len(raw_lines) and raw_lines[i + 1]:
+                    merged.append("• " + raw_lines[i + 1])
+                    i += 2
+                    continue
+            merged.append(line)
+            i += 1
+
+        bullet_re = re.compile(r"^[•\-\*–—▪◦⦿➤►\u2022\u25CF\u25AA\u2023]|^(?:\d+|[a-z])[.)]\s+\S", re.I)
+        bullets = []
+        current = None
+        for line in merged:
+            if bullet_re.match(line):
+                if current:
+                    bullets.append(current)
+                current = re.sub(r"^[•\-\*–—▪◦⦿➤►\u2022\u25CF\u25AA\u2023]\s*|^(?:\d+|[a-z])[.)]\s+", "", line, flags=re.I)
+            elif current:
+                if "|" in line or re.search(r"\b\d{4}\s*[-–]\s*(?:present|current|\d{4})\b", line, re.I) or (len(line) < 40 and line.isupper()):
+                    bullets.append(current)
+                    current = None
+                else:
+                    current += " " + line
+        if current:
+            bullets.append(current)
+
+        bullets = [b.strip() for b in bullets if len(b.strip()) > 15]
+        lines = bullets if bullets else [l for l in merged if len(l) > 20]
         if not lines:
             return 0.0, 0
-        
-        # Regex for metrics: percentages, currency, large numbers, "X out of Y"
-        # We look for \d+ followed by letters (to skip just dates) or preceded by symbols
-        metric_pattern = r"(?:\d+(?:\.\d+)?%|\$\d+(?:\.\d+)?[kmbt]?|\d+\s*(?:units|users|customers|hours|days|weeks|months|years|percent|people)|\b\d{2,}\b|\b(?:thousand|million|billion)\b|(?:\d+/\d+))"
-        
-        quantified_count = 0
-        for line in lines:
-            # Heuristic: if it has a metric it's quantified
-            if re.search(metric_pattern, line, re.IGNORECASE):
-                quantified_count += 1
-        
+
+        # Regex for metrics: percentages, currency, counts with units, multipliers, ratios
+        metric_pattern = r"(?:\d+(?:\.\d+)?%|\$\d+(?:\.\d+)?[kmbt]?|\b\d+\+?\s*(?:units|users|customers|clients|hours|days|weeks|months|years|percent|people|teams|modules|services|endpoints|tests|nodes|contracts|jobs|ms|s)\b|\b(?:sub-?\d+ms|under\s+\d+\s*ms|\d+[kmbt]\+?)\b|\b(?:thousand|million|billion)\b|(?:\d+/\d+))"
+
+        quantified_count = sum(1 for line in lines if re.search(metric_pattern, line, re.IGNORECASE))
         score = round((quantified_count / len(lines)) * 100, 2)
         return score, len(lines)
 
@@ -271,9 +420,9 @@ class NLPEngine:
             return False
 
         jd_tech_skills = [s for s in TECH_SKILLS if is_in_text(s, jd_lower)]
-        resume_set = set(resume_skills)
-        matched = [s for s in jd_tech_skills if s in resume_set]
-        missing = [s for s in jd_tech_skills if s not in resume_set]
+        resume_set = set(s.lower() for s in resume_skills)
+        matched = [s for s in jd_tech_skills if s.lower() in resume_set]
+        missing = [s for s in jd_tech_skills if s.lower() not in resume_set]
         return matched, missing
 
     def analyze(self, resume_text: str, job_description: Optional[str] = None) -> dict:

@@ -6,7 +6,7 @@ const API_URL = import.meta.env.VITE_API_URL || '';
 export const api = axios.create({
     baseURL: `${API_URL}/api/v1`,
     headers: { 'Content-Type': 'application/json' },
-    timeout: 120000, // 2 minutes for AI operations
+    timeout: 180000, // 3 minutes for AI operations
 });
 
 api.interceptors.request.use((config) => {
@@ -80,8 +80,24 @@ export const analysisApi = {
 export const chatApi = {
     createSession: (resumeId?: string) => api.post('/chat/sessions', { resumeId }),
     getSessions: () => api.get('/chat/sessions'),
-    sendMessage: (sessionId: string, message: string, mode?: string, bulletText?: string) =>
-        api.post(`/chat/sessions/${sessionId}/message`, { message, mode, bulletText }),
+    getSession: (sessionId: string) => api.get(`/chat/sessions/${sessionId}`),
+    updateSessionResume: (sessionId: string, resumeId: string | null) =>
+        api.patch(`/chat/sessions/${sessionId}`, { resumeId }),
+    sendMessage: (
+        sessionId: string,
+        message: string,
+        mode?: string,
+        bulletText?: string,
+        options?: { resumeId?: string | null; targetRole?: string; jobPosting?: string }
+    ) =>
+        api.post(`/chat/sessions/${sessionId}/message`, {
+            message,
+            mode,
+            bulletText,
+            resumeId: options?.resumeId,
+            targetRole: options?.targetRole,
+            jobPosting: options?.jobPosting,
+        }),
     deleteSession: (sessionId: string) => api.delete(`/chat/sessions/${sessionId}`),
 };
 

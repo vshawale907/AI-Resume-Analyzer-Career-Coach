@@ -3,8 +3,12 @@ import { GoogleGenerativeAI, TaskType } from '@google/generative-ai';
 import { config } from '../config/env';
 import { logger } from '../config/logger';
 
-const openai = config.OPENAI_API_KEY ? new OpenAI({ apiKey: config.OPENAI_API_KEY }) : null;
-const genAI = config.GEMINI_API_KEY ? new GoogleGenerativeAI(config.GEMINI_API_KEY) : null;
+const openai = (config.OPENAI_API_KEY && config.OPENAI_API_KEY.trim().length > 0)
+    ? new OpenAI({ apiKey: config.OPENAI_API_KEY })
+    : null;
+const genAI = (config.GEMINI_API_KEY && config.GEMINI_API_KEY.trim().length > 0)
+    ? new GoogleGenerativeAI(config.GEMINI_API_KEY)
+    : null;
 
 export const EMBEDDING_DIM = 1536; // text-embedding-3-small or ada-002
 
@@ -34,17 +38,17 @@ export async function generateEmbedding(text: string): Promise<number[]> {
 
     if (genAI) {
         try {
-            const model = genAI.getGenerativeModel({ model: 'text-embedding-004' });
+            const model = genAI.getGenerativeModel({ model: 'gemini-embedding-001' });
             const result = await model.embedContent({
                 content: { role: 'user', parts: [{ text: truncated }] },
                 taskType: TaskType.SEMANTIC_SIMILARITY,
             });
             const raw = result.embedding.values;
-            // Gemini text-embedding-004 returns 768 dims — pad to 1536 to match our Qdrant collection
-            const padded = new Array(EMBEDDING_DIM).fill(0);
-            raw.forEach((v, i) => { if (i < EMBEDDING_DIM) padded[i] = v; });
-            logger.debug('[Embedding] Generated via Gemini text-embedding-004 (padded to 1536)');
-            return padded;
+            // gemini-embedding-001 returns 3072 dims; normalize/fit to EMBEDDING_DIM (1536) for Qdrant collection
+            const sized = raw.slice(0, EMBEDDING_DIM);
+            while (sized.length < EMBEDDING_DIM) sized.push(0);
+            logger.debug(`[Embedding] Generated via Gemini gemini-embedding-001 (${raw.length} -> ${sized.length})`);
+            return sized;
         } catch (err: any) {
             logger.warn(`[Embedding] Gemini embedding failed: ${err?.message}`);
         }

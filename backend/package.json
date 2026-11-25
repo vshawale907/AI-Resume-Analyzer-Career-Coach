@@ -8,7 +8,9 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
-    "lint:fix": "eslint src --ext .ts --fix"
+    "lint:fix": "eslint src --ext .ts --fix",
+    "eval:chat": "ts-node --transpile-only tests/chat-eval/runEval.ts",
+    "test:unit": "node --require ts-node/register --test tests/unit/*.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1002.0",

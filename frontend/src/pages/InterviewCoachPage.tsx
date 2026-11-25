@@ -62,7 +62,11 @@ export default function InterviewCoachPage() {
             ];
             setQuestions(flat);
         } catch (e: unknown) {
-            setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Generation failed');
+            const err = e as { response?: { data?: { message?: string } }; code?: string; message?: string };
+            const msg = err?.response?.data?.message
+                ?? (err?.code === 'ECONNABORTED' ? 'Request timed out while generating questions. Please try again.' : err?.message)
+                ?? 'Generation failed';
+            setError(msg);
         } finally { setLoading(false); }
     };
 

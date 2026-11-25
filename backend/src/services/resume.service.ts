@@ -147,6 +147,11 @@ export const resumeService = {
         let openAIResult: Awaited<ReturnType<typeof scoreResume>> | null = null;
         try {
             openAIResult = await scoreResume(resume.cleanedText, nlpResult, jobDescriptionText);
+            if (openAIResult && !jobDescriptionText) {
+                const ats = openAIResult.atsScore ?? 0;
+                const quality = openAIResult.qualityScore ?? 0;
+                openAIResult.overallScore = Math.round((ats * 0.5) + (quality * 0.5));
+            }
         } catch (scoringError) {
             const errMsg = (scoringError as { message?: string })?.message ?? 'Unknown error';
             logger.error(`[Analysis ${resumeId}] AI scoring failed: ${errMsg}`);
