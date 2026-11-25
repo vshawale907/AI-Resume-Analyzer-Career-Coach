@@ -116,7 +116,7 @@ const CircularProgress = ({ score, colorClass, icon: Icon }: { score: number, co
 export default function AnalysisPage() {
     const navigate = useNavigate();
     const { id } = useParams<{ id: string }>();
-    const resumeId = useResumeStore(s => s.selectedResumeId) || id;
+    const resumeId = id || useResumeStore(s => s.selectedResumeId);
 
     const [loading, setLoading] = useState(true);
     const [pendingAnalysis, setPendingAnalysis] = useState(false);

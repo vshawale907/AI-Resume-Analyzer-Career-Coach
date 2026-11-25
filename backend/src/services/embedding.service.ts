@@ -11,6 +11,7 @@ const genAI = (config.GEMINI_API_KEY && config.GEMINI_API_KEY.trim().length > 0)
     : null;
 
 export const EMBEDDING_DIM = 1536; // text-embedding-3-small or ada-002
+let openaiEmbeddingCooldownUntil = 0;
 
 /**
  * Generates a dense vector embedding for a given text.
@@ -23,7 +24,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     // Trim text to avoid token limits — embeddings work well on 512-1024 token chunks
     const truncated = text.slice(0, 6000);
 
-    if (openai) {
+    if (openai && Date.now() >= openaiEmbeddingCooldownUntil) {
         try {
             const response = await openai.embeddings.create({
                 model: 'text-embedding-3-small', // 1536 dims, cost-efficient
@@ -32,7 +33,11 @@ export async function generateEmbedding(text: string): Promise<number[]> {
             logger.debug('[Embedding] Generated via OpenAI text-embedding-3-small');
             return response.data[0].embedding;
         } catch (err: any) {
-            logger.warn(`[Embedding] OpenAI embedding failed: ${err?.message}. Falling back to Gemini...`);
+            const msg = err?.message || '';
+            if (msg.includes('credits') || msg.includes('billing') || msg.includes('quota') || msg.includes('429')) {
+                openaiEmbeddingCooldownUntil = Date.now() + 15 * 60 * 1000;
+            }
+            logger.warn(`[Embedding] OpenAI embedding failed: ${msg}. Falling back to Gemini...`);
         }
     }
 

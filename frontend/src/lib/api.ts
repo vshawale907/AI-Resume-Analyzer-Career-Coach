@@ -81,6 +81,8 @@ export const chatApi = {
     createSession: (resumeId?: string) => api.post('/chat/sessions', { resumeId }),
     getSessions: () => api.get('/chat/sessions'),
     getSession: (sessionId: string) => api.get(`/chat/sessions/${sessionId}`),
+    updateSession: (sessionId: string, payload: { resumeId?: string | null; mode?: string }) =>
+        api.patch(`/chat/sessions/${sessionId}`, payload),
     updateSessionResume: (sessionId: string, resumeId: string | null) =>
         api.patch(`/chat/sessions/${sessionId}`, { resumeId }),
     sendMessage: (

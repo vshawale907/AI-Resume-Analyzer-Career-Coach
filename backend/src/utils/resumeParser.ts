@@ -298,3 +298,71 @@ export function truncateResumeBySections(
         omittedSections,
     };
 }
+
+const DETERMINISTIC_SKILLS = [
+    'python', 'javascript', 'typescript', 'java', 'c++', 'c#', 'go', 'rust', 'ruby', 'php', 'swift', 'kotlin', 'scala', 'sql', 'solidity',
+    'react', 'angular', 'vue', 'svelte', 'nextjs', 'tailwindcss', 'nodejs', 'express', 'fastapi', 'django', 'flask', 'spring boot', 'nestjs',
+    'postgresql', 'mongodb', 'mysql', 'redis', 'elasticsearch', 'sqlite', 'dynamodb', 'cassandra', 'qdrant', 'pinecone',
+    'docker', 'kubernetes', 'terraform', 'ansible', 'aws', 'aws s3', 'gcp', 'azure', 'ci/cd', 'github actions', 'gitlab ci', 'jenkins', 'linux',
+    'langchain', 'langgraph', 'rag', 'embeddings', 'openai', 'spacy', 'pytorch', 'tensorflow', 'scikit-learn', 'text-to-sql',
+    'bullmq', 'rabbitmq', 'kafka', 'celery', 'graphql', 'grpc', 'websocket', 'rest api', 'jwt', 'bcrypt', 'pytest', 'vitest', 'jest', 'git',
+    'autosar', 'freertos', 'misra-c', 'c',
+];
+
+const DETERMINISTIC_ALIASES: Record<string, string[]> = {
+    nodejs: ['node.js', 'node js'],
+    nextjs: ['next.js', 'next js'],
+    postgresql: ['postgres', 'psql'],
+    kubernetes: ['k8s'],
+    typescript: ['ts'],
+    javascript: ['js'],
+    mongodb: ['mongo'],
+    express: ['express.js', 'expressjs'],
+    'ci/cd': ['cicd', 'ci-cd'],
+    'rest api': ['rest', 'restful', 'rest apis'],
+    websocket: ['websockets'],
+    'aws s3': ['s3', 'amazon s3'],
+    go: ['golang'],
+};
+
+function hasDeterministicSkill(skill: string, textLower: string): boolean {
+    const candidates = [skill, ...(DETERMINISTIC_ALIASES[skill] || [])];
+    return candidates.some((cand) => {
+        const escaped = cand.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`(?:^|[^\\w#+])${escaped}(?:$|[^\\w#+])`, 'i').test(textLower);
+    });
+}
+
+export function computeDeterministicJobMatch(
+    resumeText: string,
+    jobPosting: string,
+    preExtractedSkills?: string[]
+): { similarityScore: number; matchedSkills: string[]; missingSkills: string[] } {
+    const resLower = resumeText.toLowerCase();
+    const jdLower = jobPosting.toLowerCase();
+
+    const resumeSkillSet = new Set<string>(
+        (preExtractedSkills && preExtractedSkills.length > 0
+            ? preExtractedSkills.map((s) => s.toLowerCase().trim())
+            : DETERMINISTIC_SKILLS.filter((s) => hasDeterministicSkill(s, resLower)))
+    );
+
+    const jdSkills = DETERMINISTIC_SKILLS.filter((s) => hasDeterministicSkill(s, jdLower));
+    const matchedSkills = jdSkills.filter((s) => resumeSkillSet.has(s) || hasDeterministicSkill(s, resLower));
+    const missingSkills = jdSkills.filter((s) => !matchedSkills.includes(s));
+
+    // Token overlap fallback similarity (0-100)
+    const tokenize = (txt: string) =>
+        new Set(txt.toLowerCase().split(/[^a-z0-9+#.]+/).filter((w) => w.length > 2));
+    const rTokens = tokenize(resumeText);
+    const jTokens = tokenize(jobPosting);
+    let overlap = 0;
+    for (const t of jTokens) {
+        if (rTokens.has(t)) overlap++;
+    }
+    const tokenSim = jTokens.size > 0 ? Math.round((overlap / jTokens.size) * 100) : 0;
+    const skillSim = jdSkills.length > 0 ? Math.round((matchedSkills.length / jdSkills.length) * 100) : tokenSim;
+    const similarityScore = jdSkills.length > 0 ? Math.round(skillSim * 0.7 + tokenSim * 0.3) : tokenSim;
+
+    return { similarityScore, matchedSkills, missingSkills };
+}

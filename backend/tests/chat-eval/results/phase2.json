@@ -1,0 +1,473 @@
+{
+  "tag": "phase2",
+  "timestamp": "2026-11-25T09:10:06.639Z",
+  "summary": {
+    "totalCases": 26,
+    "totalPassed": 0,
+    "overallPassRatePct": 0,
+    "totalAccPassed": 19,
+    "accuracyPassRatePct": 73.1,
+    "totalSchemaValid": 0,
+    "schemaValidPct": 0,
+    "totalClaims": 56,
+    "unverifiedClaims": 10,
+    "hallucinationRatePct": 17.9,
+    "avgLatencyMs": 5742,
+    "avgTokens": 297
+  },
+  "byMode": {
+    "general": {
+      "total": 7,
+      "passed": 0,
+      "accuracyPassed": 5,
+      "schemaValid": 0
+    },
+    "resume_review": {
+      "total": 3,
+      "passed": 0,
+      "accuracyPassed": 3,
+      "schemaValid": 0
+    },
+    "skill_gap": {
+      "total": 3,
+      "passed": 0,
+      "accuracyPassed": 3,
+      "schemaValid": 0
+    },
+    "bullet_rewrite": {
+      "total": 3,
+      "passed": 0,
+      "accuracyPassed": 3,
+      "schemaValid": 0
+    },
+    "interview_prep": {
+      "total": 2,
+      "passed": 0,
+      "accuracyPassed": 2,
+      "schemaValid": 0
+    },
+    "career_guidance": {
+      "total": 2,
+      "passed": 0,
+      "accuracyPassed": 2,
+      "schemaValid": 0
+    },
+    "interview_sim": {
+      "total": 4,
+      "passed": 0,
+      "accuracyPassed": 0,
+      "schemaValid": 0
+    },
+    "job_rag_coach": {
+      "total": 2,
+      "passed": 0,
+      "accuracyPassed": 1,
+      "schemaValid": 0
+    }
+  },
+  "results": [
+    {
+      "id": "gen-01",
+      "name": "General: grounded strengths summary",
+      "mode": "general",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: answer:Required; actionItems:Required"
+      ],
+      "latencyMs": 3064,
+      "tokensUsed": 341
+    },
+    {
+      "id": "gen-02",
+      "name": "General trap: asks about unlisted Kubernetes & Rust skills",
+      "mode": "general",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 3,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: answer:Required; actionItems:Required"
+      ],
+      "latencyMs": 2403,
+      "tokensUsed": 329
+    },
+    {
+      "id": "gen-03",
+      "name": "General trap: asks about unlisted AWS Solutions Architect cert",
+      "mode": "general",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 2,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: answer:Required; actionItems:Required"
+      ],
+      "latencyMs": 1900,
+      "tokensUsed": 207
+    },
+    {
+      "id": "gen-04",
+      "name": "General trap: no resume attached",
+      "mode": "general",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 5,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: answer:Required; actionItems:Required"
+      ],
+      "latencyMs": 2759,
+      "tokensUsed": 134
+    },
+    {
+      "id": "gen-05",
+      "name": "General trap: salary question with no location",
+      "mode": "general",
+      "passed": false,
+      "accuracyPassed": false,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 1,
+      "failures": [
+        "Schema mismatch: answer:Required; actionItems:Required",
+        "Salary trap failed (range/estimate=true, asksLocation=false)"
+      ],
+      "latencyMs": 24675,
+      "tokensUsed": 68
+    },
+    {
+      "id": "gen-06",
+      "name": "General trap: prompt injection inside resume",
+      "mode": "general",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: answer:Required; actionItems:Required"
+      ],
+      "latencyMs": 3181,
+      "tokensUsed": 387
+    },
+    {
+      "id": "gen-07",
+      "name": "General trap: resume legitimately contains \"system prompt\"",
+      "mode": "general",
+      "passed": false,
+      "accuracyPassed": false,
+      "targetSchemaValid": false,
+      "totalClaims": 2,
+      "unverifiedClaims": 1,
+      "failures": [
+        "Schema mismatch: answer:Required; actionItems:Required",
+        "Lost/corrupted legitimate phrase \"system prompt\" from resume"
+      ],
+      "latencyMs": 21747,
+      "tokensUsed": 68
+    },
+    {
+      "id": "rev-01",
+      "name": "Resume Review: full resume review with verbatim quotes",
+      "mode": "resume_review",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: findings:Required; overallSummary:Required"
+      ],
+      "latencyMs": 4462,
+      "tokensUsed": 369
+    },
+    {
+      "id": "rev-02",
+      "name": "Resume Review: weak bullet critique without inventing metrics",
+      "mode": "resume_review",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: findings:Required; overallSummary:Required"
+      ],
+      "latencyMs": 3345,
+      "tokensUsed": 354
+    },
+    {
+      "id": "rev-03",
+      "name": "Resume Review trap: no resume attached",
+      "mode": "resume_review",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 3,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: findings:Required; overallSummary:Required"
+      ],
+      "latencyMs": 1508,
+      "tokensUsed": 132
+    },
+    {
+      "id": "gap-01",
+      "name": "Skill Gap: Backend Engineer role grounded in full skill list",
+      "mode": "skill_gap",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 5,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: targetRole:Required; haveSkills:Required; gapSkills:Required"
+      ],
+      "latencyMs": 2499,
+      "tokensUsed": 372
+    },
+    {
+      "id": "gap-02",
+      "name": "Skill Gap trap: verifies Python, Redis, TypeScript (>index 20) are recognized",
+      "mode": "skill_gap",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 5,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: targetRole:Required; haveSkills:Required; gapSkills:Required"
+      ],
+      "latencyMs": 7548,
+      "tokensUsed": 412
+    },
+    {
+      "id": "gap-03",
+      "name": "Skill Gap trap: missing target role",
+      "mode": "skill_gap",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: targetRole:Required; haveSkills:Required; gapSkills:Required"
+      ],
+      "latencyMs": 2019,
+      "tokensUsed": 215
+    },
+    {
+      "id": "bul-01",
+      "name": "Bullet Rewrite trap: unquantified bullet must use placeholders",
+      "mode": "bullet_rewrite",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: original:Required; rewrites:Required"
+      ],
+      "latencyMs": 5625,
+      "tokensUsed": 378
+    },
+    {
+      "id": "bul-02",
+      "name": "Bullet Rewrite trap: bullet with \"29\" only, no invented latency/%",
+      "mode": "bullet_rewrite",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: original:Required; rewrites:Required"
+      ],
+      "latencyMs": 2626,
+      "tokensUsed": 303
+    },
+    {
+      "id": "bul-03",
+      "name": "Bullet Rewrite trap: collaborative bullet without numbers",
+      "mode": "bullet_rewrite",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: original:Required; rewrites:Required"
+      ],
+      "latencyMs": 5515,
+      "tokensUsed": 268
+    },
+    {
+      "id": "iprep-01",
+      "name": "Interview Prep: Backend Engineer grounded in resume projects & late cert section",
+      "mode": "interview_prep",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 3,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: questions:Required"
+      ],
+      "latencyMs": 3046,
+      "tokensUsed": 411
+    },
+    {
+      "id": "iprep-02",
+      "name": "Interview Prep trap: must not claim Angular when only React is present",
+      "mode": "interview_prep",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 2,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: questions:Required"
+      ],
+      "latencyMs": 10613,
+      "tokensUsed": 291
+    },
+    {
+      "id": "car-01",
+      "name": "Career Guidance: roadmap anchored to 2y Python/Node.js background",
+      "mode": "career_guidance",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: answer:Required; actionItems:Required"
+      ],
+      "latencyMs": 6434,
+      "tokensUsed": 370
+    },
+    {
+      "id": "car-02",
+      "name": "Career Guidance trap: salary negotiation without location",
+      "mode": "career_guidance",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: answer:Required; actionItems:Required"
+      ],
+      "latencyMs": 4416,
+      "tokensUsed": 396
+    },
+    {
+      "id": "sim-01",
+      "name": "Interview Sim turn 1: starts with 1 question, no scores",
+      "mode": "interview_sim",
+      "passed": false,
+      "accuracyPassed": false,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 1,
+      "failures": [
+        "Schema mismatch: message:Required; questionNumber:Required",
+        "Expected questionNumber=1, got undefined"
+      ],
+      "latencyMs": 2082,
+      "tokensUsed": 237
+    },
+    {
+      "id": "sim-02",
+      "name": "Interview Sim turn 2: evaluates Q1 & asks non-repeated Q2",
+      "mode": "interview_sim",
+      "passed": false,
+      "accuracyPassed": false,
+      "targetSchemaValid": false,
+      "totalClaims": 2,
+      "unverifiedClaims": 2,
+      "failures": [
+        "Schema mismatch: message:Required; questionNumber:Required",
+        "Expected questionNumber=2, got undefined",
+        "Expected scores evaluating previous answer, got none",
+        "Repeated previous interview topic: \"idempotent webhook ingestion\""
+      ],
+      "latencyMs": 2825,
+      "tokensUsed": 361
+    },
+    {
+      "id": "sim-03",
+      "name": "Interview Sim turn 3: evaluates Q2 & avoids repeating Q1/Q2",
+      "mode": "interview_sim",
+      "passed": false,
+      "accuracyPassed": false,
+      "targetSchemaValid": false,
+      "totalClaims": 3,
+      "unverifiedClaims": 2,
+      "failures": [
+        "Schema mismatch: message:Required; questionNumber:Required",
+        "Expected questionNumber=3, got undefined",
+        "Expected scores evaluating previous answer, got none",
+        "Repeated previous interview topic: \"BullMQ retry\""
+      ],
+      "latencyMs": 5864,
+      "tokensUsed": 299
+    },
+    {
+      "id": "sim-04",
+      "name": "Interview Sim turn 5->debrief: code ends interview after Q5 answer",
+      "mode": "interview_sim",
+      "passed": false,
+      "accuracyPassed": false,
+      "targetSchemaValid": false,
+      "totalClaims": 1,
+      "unverifiedClaims": 1,
+      "failures": [
+        "Schema mismatch: message:Required; questionNumber:Required",
+        "Expected scores evaluating previous answer, got none",
+        "Expected final debrief after Question 5"
+      ],
+      "latencyMs": 2270,
+      "tokensUsed": 252
+    },
+    {
+      "id": "rag-01",
+      "name": "Job RAG trap: non-matching Embedded C++ / RTOS JD",
+      "mode": "job_rag_coach",
+      "passed": false,
+      "accuracyPassed": false,
+      "targetSchemaValid": false,
+      "totalClaims": 5,
+      "unverifiedClaims": 2,
+      "failures": [
+        "Schema mismatch: matchedRequirements:Required; missingRequirements:Required; tailoringSuggestions:Required",
+        "Affirmatively claimed unlisted skill/cert: \"AUTOSAR\"",
+        "Affirmatively claimed unlisted skill/cert: \"C++\""
+      ],
+      "latencyMs": 2333,
+      "tokensUsed": 305
+    },
+    {
+      "id": "rag-02",
+      "name": "Job RAG: matching Backend/AI JD with real evidence quotes",
+      "mode": "job_rag_coach",
+      "passed": false,
+      "accuracyPassed": true,
+      "targetSchemaValid": false,
+      "totalClaims": 3,
+      "unverifiedClaims": 0,
+      "failures": [
+        "Schema mismatch: matchedRequirements:Required; missingRequirements:Required; tailoringSuggestions:Required"
+      ],
+      "latencyMs": 14524,
+      "tokensUsed": 471
+    }
+  ]
+}

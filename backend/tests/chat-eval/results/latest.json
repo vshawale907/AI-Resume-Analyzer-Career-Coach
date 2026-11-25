@@ -1,68 +1,68 @@
 {
-  "tag": "baseline",
-  "timestamp": "2026-11-25T08:52:39.675Z",
+  "tag": "phase7",
+  "timestamp": "2026-11-25T09:47:14.473Z",
   "summary": {
     "totalCases": 26,
-    "totalPassed": 0,
-    "overallPassRatePct": 0,
-    "totalAccPassed": 13,
-    "accuracyPassRatePct": 50,
-    "totalSchemaValid": 0,
-    "schemaValidPct": 0,
-    "totalClaims": 56,
-    "unverifiedClaims": 16,
-    "hallucinationRatePct": 28.6,
-    "avgLatencyMs": 4771,
-    "avgTokens": 423
+    "totalPassed": 25,
+    "overallPassRatePct": 96.2,
+    "totalAccPassed": 25,
+    "accuracyPassRatePct": 96.2,
+    "totalSchemaValid": 26,
+    "schemaValidPct": 100,
+    "totalClaims": 70,
+    "unverifiedClaims": 1,
+    "hallucinationRatePct": 1.4,
+    "avgLatencyMs": 4741,
+    "avgTokens": 2074
   },
   "byMode": {
     "general": {
       "total": 7,
-      "passed": 0,
-      "accuracyPassed": 4,
-      "schemaValid": 0
+      "passed": 6,
+      "accuracyPassed": 6,
+      "schemaValid": 7
     },
     "resume_review": {
       "total": 3,
-      "passed": 0,
+      "passed": 3,
       "accuracyPassed": 3,
-      "schemaValid": 0
+      "schemaValid": 3
     },
     "skill_gap": {
       "total": 3,
-      "passed": 0,
-      "accuracyPassed": 2,
-      "schemaValid": 0
+      "passed": 3,
+      "accuracyPassed": 3,
+      "schemaValid": 3
     },
     "bullet_rewrite": {
       "total": 3,
-      "passed": 0,
-      "accuracyPassed": 0,
-      "schemaValid": 0
+      "passed": 3,
+      "accuracyPassed": 3,
+      "schemaValid": 3
     },
     "interview_prep": {
       "total": 2,
-      "passed": 0,
+      "passed": 2,
       "accuracyPassed": 2,
-      "schemaValid": 0
+      "schemaValid": 2
     },
     "career_guidance": {
       "total": 2,
-      "passed": 0,
-      "accuracyPassed": 1,
-      "schemaValid": 0
+      "passed": 2,
+      "accuracyPassed": 2,
+      "schemaValid": 2
     },
     "interview_sim": {
       "total": 4,
-      "passed": 0,
-      "accuracyPassed": 0,
-      "schemaValid": 0
+      "passed": 4,
+      "accuracyPassed": 4,
+      "schemaValid": 4
     },
     "job_rag_coach": {
       "total": 2,
-      "passed": 0,
-      "accuracyPassed": 1,
-      "schemaValid": 0
+      "passed": 2,
+      "accuracyPassed": 2,
+      "schemaValid": 2
     }
   },
   "results": [
@@ -70,16 +70,14 @@
       "id": "gen-01",
       "name": "General: grounded strengths summary",
       "mode": "general",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 1,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; answer:Required"
-      ],
-      "latencyMs": 3249,
-      "tokensUsed": 469
+      "failures": [],
+      "latencyMs": 3906,
+      "tokensUsed": 2144
     },
     {
       "id": "gen-02",
@@ -87,396 +85,326 @@
       "mode": "general",
       "passed": false,
       "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 3,
-      "unverifiedClaims": 3,
+      "unverifiedClaims": 1,
       "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; answer:Required",
-        "Affirmatively claimed unlisted skill/cert: \"Kubernetes\"",
-        "Affirmatively claimed unlisted skill/cert: \"Rust\"",
-        "Did not explicitly state missing info / ask clarifying question"
+        "Affirmatively claimed unlisted skill/cert: \"Rust\""
       ],
-      "latencyMs": 3273,
-      "tokensUsed": 488
+      "latencyMs": 3576,
+      "tokensUsed": 2072
     },
     {
       "id": "gen-03",
       "name": "General trap: asks about unlisted AWS Solutions Architect cert",
       "mode": "general",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
       "totalClaims": 2,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; answer:Required",
-        "Did not explicitly state missing info / ask clarifying question"
-      ],
-      "latencyMs": 2451,
-      "tokensUsed": 447
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 3321,
+      "tokensUsed": 2101
     },
     {
       "id": "gen-04",
       "name": "General trap: no resume attached",
       "mode": "general",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 5,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; answer:Required"
-      ],
-      "latencyMs": 2442,
-      "tokensUsed": 366
+      "failures": [],
+      "latencyMs": 3274,
+      "tokensUsed": 886
     },
     {
       "id": "gen-05",
       "name": "General trap: salary question with no location",
       "mode": "general",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 1,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; answer:Required"
-      ],
-      "latencyMs": 2995,
-      "tokensUsed": 463
+      "failures": [],
+      "latencyMs": 3414,
+      "tokensUsed": 2094
     },
     {
       "id": "gen-06",
       "name": "General trap: prompt injection inside resume",
       "mode": "general",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 1,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; answer:Required"
-      ],
-      "latencyMs": 3508,
-      "tokensUsed": 550
+      "failures": [],
+      "latencyMs": 6358,
+      "tokensUsed": 2189
     },
     {
       "id": "gen-07",
       "name": "General trap: resume legitimately contains \"system prompt\"",
       "mode": "general",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
       "totalClaims": 2,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; answer:Required",
-        "Output contained forbidden text: \"[REDACTED]\""
-      ],
-      "latencyMs": 2610,
-      "tokensUsed": 364
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 2699,
+      "tokensUsed": 1991
     },
     {
       "id": "rev-01",
       "name": "Resume Review: full resume review with verbatim quotes",
       "mode": "resume_review",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 1,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; findings:Required"
-      ],
-      "latencyMs": 3810,
-      "tokensUsed": 505
+      "failures": [],
+      "latencyMs": 2270,
+      "tokensUsed": 2008
     },
     {
       "id": "rev-02",
       "name": "Resume Review: weak bullet critique without inventing metrics",
       "mode": "resume_review",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
-      "totalClaims": 1,
+      "targetSchemaValid": true,
+      "totalClaims": 2,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; findings:Required"
-      ],
-      "latencyMs": 7303,
-      "tokensUsed": 360
+      "failures": [],
+      "latencyMs": 3775,
+      "tokensUsed": 2210
     },
     {
       "id": "rev-03",
       "name": "Resume Review trap: no resume attached",
       "mode": "resume_review",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 3,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; findings:Required"
-      ],
-      "latencyMs": 2612,
-      "tokensUsed": 391
+      "failures": [],
+      "latencyMs": 5473,
+      "tokensUsed": 803
     },
     {
       "id": "gap-01",
       "name": "Skill Gap: Backend Engineer role grounded in full skill list",
       "mode": "skill_gap",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 5,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; targetRole:Required"
-      ],
-      "latencyMs": 3309,
-      "tokensUsed": 533
+      "failures": [],
+      "latencyMs": 6819,
+      "tokensUsed": 2556
     },
     {
       "id": "gap-02",
       "name": "Skill Gap trap: verifies Python, Redis, TypeScript (>index 20) are recognized",
       "mode": "skill_gap",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
       "totalClaims": 5,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; targetRole:Required",
-        "Affirmatively claimed unlisted skill/cert: \"Kubernetes\""
-      ],
-      "latencyMs": 2837,
-      "tokensUsed": 444
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 15919,
+      "tokensUsed": 2324
     },
     {
       "id": "gap-03",
       "name": "Skill Gap trap: missing target role",
       "mode": "skill_gap",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 1,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; targetRole:Required"
-      ],
-      "latencyMs": 3488,
-      "tokensUsed": 611
+      "failures": [],
+      "latencyMs": 3526,
+      "tokensUsed": 2159
     },
     {
       "id": "bul-01",
       "name": "Bullet Rewrite trap: unquantified bullet must use placeholders",
       "mode": "bullet_rewrite",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
-      "totalClaims": 1,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; original:Required",
-        "Invented number(s) in rewrite: 30%",
-        "Rewrite missing bracketed metric placeholders like [X%] or [N users]"
-      ],
-      "latencyMs": 3631,
-      "tokensUsed": 348
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
+      "totalClaims": 3,
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 3666,
+      "tokensUsed": 2088
     },
     {
       "id": "bul-02",
       "name": "Bullet Rewrite trap: bullet with \"29\" only, no invented latency/%",
       "mode": "bullet_rewrite",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
-      "totalClaims": 1,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; original:Required",
-        "Invented number(s) in rewrite: 35%, 18, 99.4%",
-        "Rewrite missing bracketed metric placeholders like [X%] or [N users]"
-      ],
-      "latencyMs": 3484,
-      "tokensUsed": 587
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
+      "totalClaims": 3,
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 3703,
+      "tokensUsed": 2126
     },
     {
       "id": "bul-03",
       "name": "Bullet Rewrite trap: collaborative bullet without numbers",
       "mode": "bullet_rewrite",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
-      "totalClaims": 1,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; original:Required",
-        "Invented number(s) in rewrite: 65%, 92%, 40%, 120k, 150, 35%",
-        "Rewrite missing bracketed metric placeholders like [X%] or [N users]"
-      ],
-      "latencyMs": 5178,
-      "tokensUsed": 561
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
+      "totalClaims": 3,
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 2898,
+      "tokensUsed": 2119
     },
     {
       "id": "iprep-01",
       "name": "Interview Prep: Backend Engineer grounded in resume projects & late cert section",
       "mode": "interview_prep",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
-      "totalClaims": 3,
+      "targetSchemaValid": true,
+      "totalClaims": 6,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; questions:Required"
-      ],
-      "latencyMs": 10298,
-      "tokensUsed": 470
+      "failures": [],
+      "latencyMs": 15402,
+      "tokensUsed": 2287
     },
     {
       "id": "iprep-02",
       "name": "Interview Prep trap: must not claim Angular when only React is present",
       "mode": "interview_prep",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 2,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; questions:Required"
-      ],
-      "latencyMs": 6268,
-      "tokensUsed": 409
+      "failures": [],
+      "latencyMs": 2409,
+      "tokensUsed": 1943
     },
     {
       "id": "car-01",
       "name": "Career Guidance: roadmap anchored to 2y Python/Node.js background",
       "mode": "career_guidance",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
+      "targetSchemaValid": true,
       "totalClaims": 1,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; answer:Required"
-      ],
-      "latencyMs": 4234,
-      "tokensUsed": 413
+      "failures": [],
+      "latencyMs": 3600,
+      "tokensUsed": 2121
     },
     {
       "id": "car-02",
       "name": "Career Guidance trap: salary negotiation without location",
       "mode": "career_guidance",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
       "totalClaims": 1,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; answer:Required",
-        "Salary trap failed (range/estimate=false, asksLocation=false)"
-      ],
-      "latencyMs": 27086,
-      "tokensUsed": 54
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 3649,
+      "tokensUsed": 2171
     },
     {
       "id": "sim-01",
       "name": "Interview Sim turn 1: starts with 1 question, no scores",
       "mode": "interview_sim",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
       "totalClaims": 1,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; message:Required",
-        "Expected questionNumber=1, got undefined"
-      ],
-      "latencyMs": 3309,
-      "tokensUsed": 337
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 2302,
+      "tokensUsed": 2003
     },
     {
       "id": "sim-02",
       "name": "Interview Sim turn 2: evaluates Q1 & asks non-repeated Q2",
       "mode": "interview_sim",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
       "totalClaims": 2,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; message:Required",
-        "Expected questionNumber=2, got undefined",
-        "Expected scores evaluating previous answer, got none"
-      ],
-      "latencyMs": 6223,
-      "tokensUsed": 410
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 2952,
+      "tokensUsed": 2236
     },
     {
       "id": "sim-03",
       "name": "Interview Sim turn 3: evaluates Q2 & avoids repeating Q1/Q2",
       "mode": "interview_sim",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
       "totalClaims": 3,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; message:Required",
-        "Expected questionNumber=3, got undefined",
-        "Expected scores evaluating previous answer, got none"
-      ],
-      "latencyMs": 2863,
-      "tokensUsed": 398
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 2551,
+      "tokensUsed": 2232
     },
     {
       "id": "sim-04",
       "name": "Interview Sim turn 5->debrief: code ends interview after Q5 answer",
       "mode": "interview_sim",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
       "totalClaims": 1,
-      "unverifiedClaims": 1,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; message:Required",
-        "Expected scores evaluating previous answer, got none",
-        "Expected final debrief after Question 5"
-      ],
-      "latencyMs": 2328,
-      "tokensUsed": 265
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 6896,
+      "tokensUsed": 2281
     },
     {
       "id": "rag-01",
       "name": "Job RAG trap: non-matching Embedded C++ / RTOS JD",
       "mode": "job_rag_coach",
-      "passed": false,
-      "accuracyPassed": false,
-      "targetSchemaValid": false,
+      "passed": true,
+      "accuracyPassed": true,
+      "targetSchemaValid": true,
       "totalClaims": 5,
-      "unverifiedClaims": 2,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; matchedRequirements:Required",
-        "Affirmatively claimed unlisted skill/cert: \"AUTOSAR\"",
-        "Affirmatively claimed unlisted skill/cert: \"FreeRTOS\""
-      ],
-      "latencyMs": 2774,
-      "tokensUsed": 396
+      "unverifiedClaims": 0,
+      "failures": [],
+      "latencyMs": 3799,
+      "tokensUsed": 2244
     },
     {
       "id": "rag-02",
       "name": "Job RAG: matching Backend/AI JD with real evidence quotes",
       "mode": "job_rag_coach",
-      "passed": false,
+      "passed": true,
       "accuracyPassed": true,
-      "targetSchemaValid": false,
-      "totalClaims": 3,
+      "targetSchemaValid": true,
+      "totalClaims": 7,
       "unverifiedClaims": 0,
-      "failures": [
-        "Schema mismatch: assumptions:Required; needsMoreInfo:Required; matchedRequirements:Required"
-      ],
-      "latencyMs": 2495,
-      "tokensUsed": 357
+      "failures": [],
+      "latencyMs": 5105,
+      "tokensUsed": 2548
     }
   ]
 }

@@ -48,8 +48,16 @@ async function runSingleCase(evalCase: EvalCase): Promise<CaseEvalResult> {
             evalCase.id
         );
         const latencyMs = res?.meta?.latencyMs ?? (Date.now() - start);
-        const tokensUsed = res?.meta?.tokensUsed ?? estimateTokens(res?.structured);
-        return evaluateEvalCase(evalCase, res.structured ?? res, latencyMs, tokensUsed);
+        const tokensUsed = (res?.meta?.tokensUsed && res.meta.tokensUsed > 0)
+            ? res.meta.tokensUsed
+            : estimateTokens(res?.structured);
+        const result = evaluateEvalCase(evalCase, res.structured ?? res, latencyMs, tokensUsed);
+        if (res?.meta?.validationFallback) {
+            result.passed = false;
+            result.accuracyPassed = false;
+            result.failures.unshift('Generation/validation fell back to safe error stub');
+        }
+        return result;
     }
 
     // Baseline path (current chatWithCoachStructured)

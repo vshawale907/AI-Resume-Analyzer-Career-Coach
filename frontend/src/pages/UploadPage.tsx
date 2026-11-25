@@ -31,21 +31,19 @@ export default function UploadPage() {
         if (!file) return;
         setUploading(true); setStep('analyzing');
         try {
-            // Step 1: Upload file → triggers BullMQ background job automatically
+            // Upload file + optional job description → enqueues a single BullMQ analysis job
             const fd = new FormData();
             fd.append('resume', file);
             fd.append('title', title || file.name);
+            if (jobDescription.trim()) {
+                fd.append('jobDescriptionText', jobDescription.trim());
+            }
             const { data: uploadData } = await resumeApi.upload(fd);
             const resume = uploadData.data.resume;
             addResume(resume);
             setResumeId(resume._id);
 
-            // Step 2: If user provided a job description, explicitly re-queue with JD
-            if (jobDescription.trim()) {
-                await resumeApi.analyze(resume._id, jobDescription);
-            }
-
-            // Step 3: Poll /status every 3s until analysis is ready (max 3 min)
+            // Poll /status every 3s until analysis is ready (max 3 min)
             const maxWait = Date.now() + 3 * 60 * 1000;
             const poll = async (): Promise<void> => {
                 if (Date.now() > maxWait) {

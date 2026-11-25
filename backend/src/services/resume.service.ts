@@ -72,7 +72,8 @@ export const resumeService = {
     upload: async (
         userId: string,
         file: Express.Multer.File,
-        title?: string
+        title?: string,
+        jobDescriptionText?: string
     ) => {
         const fileExt = path.extname(file.originalname).toLowerCase().replace('.', '');
         const rawText = await extractText(file.path, fileExt);
@@ -105,9 +106,14 @@ export const resumeService = {
         // Increment user resume count
         await UserModel.findByIdAndUpdate(userId, { $inc: { resumeCount: 1 } });
 
-        // Dispatch analysis to background worker queue (non-blocking)
-        const jobId = await enqueueResumeAnalysis({ resumeId: resume._id.toString(), userId });
-        logger.info(`Resume uploaded: ${resume._id} by user ${userId}. Analysis job ${jobId} queued.`);
+        // Dispatch a single analysis job (with optional JD so it never races against a no-JD job)
+        const cleanJD = jobDescriptionText?.trim() ? jobDescriptionText.trim() : undefined;
+        const jobId = await enqueueResumeAnalysis({
+            resumeId: resume._id.toString(),
+            userId,
+            jobDescriptionText: cleanJD,
+        });
+        logger.info(`Resume uploaded: ${resume._id} by user ${userId}. Analysis job ${jobId} queued${cleanJD ? ' (with JD)' : ''}.`);
         return resume;
     },
 

@@ -11,20 +11,13 @@ import { useResumeStore } from '../stores/resumeStore';
 
 type CoachingMode = 'general' | 'resume_review' | 'skill_gap' | 'interview_prep' | 'career_guidance' | 'bullet_rewrite' | 'interview_sim' | 'job_rag_coach';
 
-interface StructuredResponse {
-    feedback: string;
-    improvements: string[];
-    example: string;
-    confidence: number;
-    reasoning: string;
-    quickWin: string;
-    mode: CoachingMode;
-}
+type StructuredResponse = Record<string, any> & { mode?: CoachingMode };
 
 interface Message {
     role: 'user' | 'assistant';
     content: string;
     structured?: StructuredResponse | null;
+    meta?: { degradedFallback?: boolean; verification?: { verified: boolean; removedClaims: number; warnings?: string[] } } | null;
     mode?: CoachingMode;
 }
 
@@ -89,67 +82,204 @@ const COACHING_MODES: { mode: CoachingMode; label: string; icon: typeof FileText
     },
 ];
 
-function StructuredCard({ data, onCopy }: { data: StructuredResponse; onCopy: (text: string) => void }) {
+function StructuredCard({ data, meta, fallbackContent, onCopy }: {
+    data: StructuredResponse;
+    meta?: Message['meta'];
+    fallbackContent: string;
+    onCopy: (text: string) => void;
+}) {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {
-        const text = `${data.feedback}\n\nKey Improvements:\n${data.improvements.map(i => `• ${i}`).join('\n')}\n\nQuick Win: ${data.quickWin}\n\nExample:\n${data.example}`;
-        onCopy(text);
+        onCopy(fallbackContent || JSON.stringify(data, null, 2));
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const confColor = data.confidence >= 8 ? 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20' 
-        : data.confidence >= 6 ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' 
-        : 'text-rose-400 bg-rose-400/10 border-rose-400/20';
+    const primaryText: string =
+        data.answer ||
+        data.overallSummary ||
+        data.message ||
+        data.feedback ||
+        fallbackContent;
+
+    const actionItems: string[] = Array.isArray(data.actionItems)
+        ? data.actionItems
+        : Array.isArray(data.improvements)
+            ? data.improvements
+            : Array.isArray(data.tailoringSuggestions)
+                ? data.tailoringSuggestions
+                : [];
+
+    const assumptions: string[] = Array.isArray(data.assumptions) ? data.assumptions : [];
 
     return (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
             className="bg-gray-800/60 border border-white/10 rounded-2xl overflow-hidden shadow-md w-full max-w-[85%]">
-            
-            {/* Header: Feedback + Confidence Badge */}
+
+            {/* Header */}
             <div className="px-5 pt-5 pb-4 border-b border-white/10">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                     <div className="flex items-center gap-2">
                         <Sparkles size={14} className="text-amber-400 flex-shrink-0" />
                         <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Coach Feedback</span>
                     </div>
-                    {data.confidence && (
-                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider ${confColor}`}>
-                            Confidence: {data.confidence}/10
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {typeof data.similarityScore === 'number' && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider text-indigo-300 bg-indigo-500/10 border-indigo-500/25">
+                                NLP Match: {data.similarityScore}%
+                            </span>
+                        )}
+                        {typeof data.questionNumber === 'number' && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider text-cyan-300 bg-cyan-500/10 border-cyan-500/25">
+                                {data.isDebrief ? 'Final Debrief (5/5)' : `Question ${data.questionNumber}/5`}
+                            </span>
+                        )}
+                        {data.needsMoreInfo && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider text-amber-300 bg-amber-500/10 border-amber-500/25">
+                                Needs Info
+                            </span>
+                        )}
+                        {meta?.verification && meta.verification.removedClaims > 0 && (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider text-emerald-300 bg-emerald-500/10 border-emerald-500/25">
+                                Verified ({meta.verification.removedClaims} ungrounded filtered)
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <p className="text-[15px] text-gray-200 leading-relaxed">{data.feedback}</p>
-                {data.reasoning && (
-                    <p className="mt-2 text-xs text-gray-400 italic">" {data.reasoning} "</p>
+                <p className="text-[15px] text-gray-200 leading-relaxed whitespace-pre-wrap">{primaryText}</p>
+                {data.followUpQuestion && (
+                    <p className="mt-2.5 text-sm text-amber-300 font-medium">{data.followUpQuestion}</p>
                 )}
             </div>
 
-            {/* Quick Win Block */}
-            {data.quickWin && (
-                <div className="px-5 py-4 border-b border-white/10 bg-gradient-to-r from-amber-500/10 to-transparent">
-                    <div className="flex items-start gap-3">
-                        <div className="mt-0.5 w-6 h-6 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                            <span className="text-amber-500 font-bold text-sm">!</span>
-                        </div>
-                        <div>
-                            <span className="text-xs font-bold text-amber-500 uppercase tracking-widest block mb-1">Quick Win (Do this right now)</span>
-                            <span className="text-sm text-gray-200">{data.quickWin}</span>
-                        </div>
-                    </div>
+            {/* Interview Sim Scores */}
+            {data.scores && (
+                <div className="px-5 py-3 border-b border-white/10 bg-cyan-950/20 flex flex-wrap gap-3 text-xs">
+                    <span className="text-cyan-300 font-semibold">STAR: {data.scores.star}/5</span>
+                    <span className="text-cyan-300 font-semibold">Technical: {data.scores.technical}/5</span>
+                    <span className="text-cyan-300 font-semibold">Communication: {data.scores.communication}/5</span>
                 </div>
             )}
 
-            {/* Improvements */}
-            {data.improvements?.length > 0 && (
+            {/* Resume Review Findings */}
+            {Array.isArray(data.findings) && data.findings.length > 0 && (
+                <div className="px-5 py-4 border-b border-white/10 space-y-3">
+                    <span className="text-xs font-bold text-blue-400 uppercase tracking-wider block">Findings & Evidence</span>
+                    {data.findings.map((f: any, idx: number) => (
+                        <div key={idx} className="bg-gray-950/60 border border-white/10 rounded-xl p-3 space-y-1.5 text-sm">
+                            <p className="text-gray-200 font-medium">{f.issue}</p>
+                            {f.evidenceQuote && <p className="text-xs text-gray-400 italic">Evidence: "{f.evidenceQuote}"</p>}
+                            <p className="text-xs text-emerald-400">Fix: {f.fix}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Skill Gap */}
+            {(Array.isArray(data.haveSkills) || Array.isArray(data.gapSkills)) && (
+                <div className="px-5 py-4 border-b border-white/10 space-y-3 text-sm">
+                    {data.targetRole && <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Target Role: {data.targetRole}</p>}
+                    {data.haveSkills?.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {data.haveSkills.map((s: string, idx: number) => (
+                                <span key={idx} className="px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs">{s}</span>
+                            ))}
+                        </div>
+                    )}
+                    {data.gapSkills?.length > 0 && (
+                        <ul className="space-y-1.5">
+                            {data.gapSkills.map((g: any, idx: number) => (
+                                <li key={idx} className="text-xs text-gray-300"><strong className="text-amber-300">{g.skill}:</strong> {g.whyItMatters}</li>
+                            ))}
+                        </ul>
+                    )}
+                    {data.roadmap30_60_90 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
+                            {(['days30', 'days60', 'days90'] as const).map((k) => (
+                                data.roadmap30_60_90[k]?.length > 0 && (
+                                    <div key={k} className="bg-gray-950/60 border border-white/10 rounded-lg p-2.5">
+                                        <span className="font-bold text-gray-300 block mb-1">{k.replace('days', '')} Days</span>
+                                        <ul className="space-y-1 text-gray-400">
+                                            {data.roadmap30_60_90[k].map((step: string, i: number) => <li key={i}>• {step}</li>)}
+                                        </ul>
+                                    </div>
+                                )
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Bullet Rewrites */}
+            {Array.isArray(data.rewrites) && data.rewrites.length > 0 && (
+                <div className="px-5 py-4 border-b border-white/10 space-y-2.5">
+                    <span className="text-xs font-bold text-pink-400 uppercase tracking-wider block">Rewritten Bullets</span>
+                    {data.rewrites.map((rw: string, idx: number) => (
+                        <div key={idx} className="bg-gray-950/60 border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-gray-200 font-mono">
+                            {rw}
+                        </div>
+                    ))}
+                    {Array.isArray(data.questionsForUser) && data.questionsForUser.length > 0 && (
+                        <div className="pt-1 space-y-1">
+                            <span className="text-xs font-semibold text-amber-400">Fill in real metrics:</span>
+                            {data.questionsForUser.map((q: string, idx: number) => (
+                                <p key={idx} className="text-xs text-gray-400">• {q}</p>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Interview Prep Questions */}
+            {Array.isArray(data.questions) && data.questions.length > 0 && (
+                <div className="px-5 py-4 border-b border-white/10 space-y-3">
+                    <span className="text-xs font-bold text-purple-400 uppercase tracking-wider block">Tailored Questions</span>
+                    {data.questions.map((q: any, idx: number) => (
+                        <div key={idx} className="bg-gray-950/60 border border-white/10 rounded-xl p-3 space-y-1 text-sm">
+                            <p className="text-gray-200 font-semibold">{idx + 1}. {q.question}</p>
+                            <p className="text-xs text-gray-400">{q.whyAsked}</p>
+                            <p className="text-xs text-emerald-300">Outline: {q.answerOutline}</p>
+                            {q.resumeEvidence && <p className="text-[11px] text-gray-500 italic">Evidence: "{q.resumeEvidence}"</p>}
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Job RAG Matched / Missing */}
+            {(Array.isArray(data.matchedRequirements) || Array.isArray(data.missingRequirements)) && (
+                <div className="px-5 py-4 border-b border-white/10 space-y-3 text-xs">
+                    {data.matchedRequirements?.length > 0 && (
+                        <div className="space-y-1.5">
+                            <span className="font-bold text-emerald-400 uppercase tracking-wider block">Matched Requirements</span>
+                            {data.matchedRequirements.map((m: any, idx: number) => (
+                                <div key={idx} className="bg-gray-950/60 border border-white/10 rounded-lg p-2.5">
+                                    <p className="text-gray-200 font-medium">{m.requirement}</p>
+                                    <p className="text-gray-400 italic mt-0.5">"{m.resumeEvidence}"</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                    {data.missingRequirements?.length > 0 && (
+                        <div className="space-y-1">
+                            <span className="font-bold text-rose-400 uppercase tracking-wider block">Missing Requirements</span>
+                            {data.missingRequirements.map((mr: string, idx: number) => (
+                                <p key={idx} className="text-gray-300">• {mr}</p>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {/* Action Items */}
+            {actionItems.length > 0 && (
                 <div className="px-5 py-4 border-b border-white/10">
                     <div className="flex items-center gap-2 mb-3">
                         <CheckCircle size={14} className="text-emerald-400 flex-shrink-0" />
                         <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Action Items</span>
                     </div>
                     <ul className="space-y-2">
-                        {data.improvements.map((item, i) => (
+                        {actionItems.map((item, i) => (
                             <li key={i} className="flex items-start gap-2.5 text-sm text-gray-300">
                                 <ChevronRight size={13} className="text-amber-400/70 mt-0.5 flex-shrink-0" />
                                 <span>{item}</span>
@@ -159,12 +289,17 @@ function StructuredCard({ data, onCopy }: { data: StructuredResponse; onCopy: (t
                 </div>
             )}
 
-            {/* Example */}
+            {/* Legacy Quick Win & Example support */}
+            {data.quickWin && (
+                <div className="px-5 py-3 border-b border-white/10 bg-amber-500/5 text-xs text-gray-200">
+                    <strong className="text-amber-400">Quick Win:</strong> {data.quickWin}
+                </div>
+            )}
             {data.example && (
-                <div className="px-5 py-4">
+                <div className="px-5 py-4 border-b border-white/10">
                     <div className="flex items-center gap-2 mb-2">
                         <Lightbulb size={14} className="text-amber-400 flex-shrink-0" />
-                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Example / Rewrite</span>
+                        <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Example</span>
                     </div>
                     <div className="bg-gray-950/60 rounded-xl border border-white/10 px-4 py-3 text-sm text-gray-200 font-mono leading-relaxed whitespace-pre-wrap">
                         {data.example}
@@ -172,8 +307,13 @@ function StructuredCard({ data, onCopy }: { data: StructuredResponse; onCopy: (t
                 </div>
             )}
 
-            {/* Copy button */}
-            <div className="px-5 pb-4 flex justify-end">
+            {/* Assumptions + Copy */}
+            <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+                {assumptions.length > 0 ? (
+                    <p className="text-[11px] text-gray-500 flex-1 min-w-[200px]">
+                        Assumptions: {assumptions.join(' • ')}
+                    </p>
+                ) : <span />}
                 <button onClick={handleCopy}
                     className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-amber-400 transition-colors py-1 px-2 rounded-lg hover:bg-white/5">
                     {copied ? <><Check size={12} className="text-emerald-400" /> Copied</> : <><Copy size={12} /> Copy response</>}
@@ -252,9 +392,11 @@ export default function ChatCoachPage() {
                 role: m.role,
                 content: m.content,
                 structured: m.structured ?? null,
+                meta: m.metadata ?? null,
                 mode: m.structured?.mode,
             }));
             setMessages(loadedMsgs);
+            if (sess.activeMode) setActiveMode(sess.activeMode);
             if (sess.resume) {
                 setSelectedResumeId(String(sess.resume));
             } else {
@@ -302,7 +444,8 @@ export default function ChatCoachPage() {
             });
             const reply = data.data.reply as string;
             const structured = data.data.structured as StructuredResponse | null;
-            setMessages((m) => [...m, { role: 'assistant', content: reply, structured, mode }]);
+            const meta = data.data.meta ?? null;
+            setMessages((m) => [...m, { role: 'assistant', content: reply, structured, meta, mode }]);
             if (messages.length === 0) {
                 setSessions((prev) =>
                     prev.map((s) =>
@@ -320,27 +463,20 @@ export default function ChatCoachPage() {
         }
     };
 
-    const triggerMode = async (modeConfig: typeof COACHING_MODES[0]) => {
-        if (!activeSession) return;
-        if (modeConfig.mode === 'bullet_rewrite') {
-            setActiveMode('bullet_rewrite');
+    const selectMode = async (newMode: CoachingMode) => {
+        setActiveMode(newMode);
+        if (activeSession) {
+            chatApi.updateSession(activeSession, { mode: newMode }).catch(console.error);
+        }
+        if (newMode === 'bullet_rewrite') {
             setShowBulletModal(true);
-            return;
+        } else if (newMode === 'job_rag_coach' && !jobPosting.trim()) {
+            setShowJobModal(true);
         }
-        if (modeConfig.mode === 'job_rag_coach') {
-            setActiveMode('job_rag_coach');
-            if (!jobPosting.trim()) {
-                setShowJobModal(true);
-                return;
-            }
-        }
+    };
 
-        setActiveMode(modeConfig.mode);
-        if (messages.length === 0) {
-            await sendMessage(modeConfig.prompt, modeConfig.mode, undefined, activeSession);
-        } else {
-            await sendMessage(modeConfig.prompt, modeConfig.mode, undefined, activeSession);
-        }
+    const triggerMode = async (modeConfig: typeof COACHING_MODES[0]) => {
+        await selectMode(modeConfig.mode);
     };
 
     const submitBulletRewrite = () => {
@@ -530,7 +666,7 @@ export default function ChatCoachPage() {
                         <div className="flex-shrink-0 border-b border-white/5 bg-gray-900/50 px-4 py-2.5">
                             <div className="flex gap-2 overflow-x-auto scrollbar-none">
                                 <button
-                                    onClick={() => setActiveMode('general')}
+                                    onClick={() => selectMode('general')}
                                     className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${activeMode === 'general'
                                         ? 'bg-amber-500/15 border-amber-500/30 text-amber-400'
                                         : 'bg-transparent border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-200'}`}>
@@ -590,7 +726,11 @@ export default function ChatCoachPage() {
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 max-w-sm w-full mt-2">
                                         {COACHING_MODES.slice(0, 4).map((m) => (
-                                            <button key={m.mode} onClick={() => triggerMode(m)}
+                                            <button key={m.mode}
+                                                onClick={() => {
+                                                    setActiveMode(m.mode);
+                                                    sendMessage(m.prompt, m.mode);
+                                                }}
                                                 className="flex items-center gap-2 p-2.5 rounded-xl bg-gray-900 border border-white/10 hover:border-amber-500/30 hover:bg-amber-500/5 text-left transition-all">
                                                 <m.icon size={14} className={m.color} />
                                                 <div>
@@ -617,7 +757,7 @@ export default function ChatCoachPage() {
 
                                         {/* Content */}
                                         {msg.role === 'assistant' && msg.structured ? (
-                                            <StructuredCard data={msg.structured} onCopy={copyText} />
+                                            <StructuredCard data={msg.structured} meta={msg.meta} fallbackContent={msg.content} onCopy={copyText} />
                                         ) : (
                                             <div className={`max-w-[78%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm
                                                 ${msg.role === 'assistant'
@@ -657,7 +797,7 @@ export default function ChatCoachPage() {
                                             </>
                                         ) : null;
                                     })()}
-                                    <button onClick={() => setActiveMode('general')} className="text-xs text-amber-400 hover:underline ml-auto">
+                                    <button onClick={() => selectMode('general')} className="text-xs text-amber-400 hover:underline ml-auto">
                                         Switch to General
                                     </button>
                                 </div>

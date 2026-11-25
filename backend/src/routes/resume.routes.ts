@@ -13,8 +13,11 @@ router.use(authenticate);
 router.post('/upload', rateLimiter.upload, upload.single('resume'), async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         if (!req.file) throw new Error('No file provided');
-        const { title } = z.object({ title: z.string().optional() }).parse(req.body);
-        const resume = await resumeService.upload(req.user!.id, req.file, title);
+        const { title, jobDescriptionText } = z.object({
+            title: z.string().optional(),
+            jobDescriptionText: z.string().max(15000).optional(),
+        }).parse(req.body);
+        const resume = await resumeService.upload(req.user!.id, req.file, title, jobDescriptionText);
         res.success({ resume }, 'Resume uploaded successfully', 201);
     } catch (err) { next(err); }
 });
@@ -23,7 +26,7 @@ router.post('/upload', rateLimiter.upload, upload.single('resume'), async (req: 
 router.post('/:id/analyze', rateLimiter.analysis, async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
         const { jobDescriptionText } = z.object({
-            jobDescriptionText: z.string().max(8000).optional(),
+            jobDescriptionText: z.string().max(15000).optional(),
         }).parse(req.body);
         const { ResumeModel, ResumeStatus } = await import('../models/Resume.model');
         await ResumeModel.findOneAndUpdate(

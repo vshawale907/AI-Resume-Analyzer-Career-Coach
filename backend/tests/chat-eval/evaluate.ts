@@ -247,7 +247,9 @@ export function evaluateEvalCase(
         totalClaims++;
         const lowerTerm = term.toLowerCase();
         if (Array.isArray(rawResponse.haveSkills)) {
-            const hasInArray = rawResponse.haveSkills.some((s: unknown) => String(s).toLowerCase().includes(lowerTerm));
+            const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const termWordRe = new RegExp(`(?:^|[^\\w#+])${escapedTerm}(?:$|[^\\w#+])`, 'i');
+            const hasInArray = rawResponse.haveSkills.some((s: unknown) => termWordRe.test(String(s)));
             if (hasInArray) {
                 unverifiedClaims++;
                 failures.push(`Claimed unlisted skill in haveSkills: "${term}"`);
@@ -264,16 +266,22 @@ export function evaluateEvalCase(
                 continue;
             }
         }
-        // Check main narrative text
-        const textToCheck = [
+        // Check main narrative / positive-claim fields ONLY (exclude gapSkills and missingRequirements,
+        // because listing a skill in gapSkills / missingRequirements means the user LACKS it)
+        const narrativeFields = [
             rawResponse.answer,
             rawResponse.overallSummary,
             rawResponse.feedback,
             ...(Array.isArray(rawResponse.findings) ? rawResponse.findings.map((f: any) => f?.issue) : []),
-            ...(Array.isArray(rawResponse.questions) ? rawResponse.questions.map((q: any) => q?.question + ' ' + q?.resumeEvidence) : []),
-        ].filter(Boolean).join(' ');
+            ...(Array.isArray(rawResponse.questions) ? rawResponse.questions.map((q: any) => `${q?.question || ''} ${q?.resumeEvidence || ''}`) : []),
+            ...(Array.isArray(rawResponse.matchedRequirements) ? rawResponse.matchedRequirements.map((m: any) => `${m?.requirement || ''} ${m?.resumeEvidence || ''}`) : []),
+        ].filter(Boolean);
 
-        if (!isSkillNegated(textToCheck || fullText, term)) {
+        // On legacy baseline objects (no answer/findings/matchedRequirements), fall back to fullText
+        const isPhase3Shape = 'answer' in rawResponse || 'findings' in rawResponse || 'haveSkills' in rawResponse || 'matchedRequirements' in rawResponse || 'questions' in rawResponse;
+        const textToCheck = isPhase3Shape ? narrativeFields.join(' ') : fullText;
+
+        if (textToCheck && !isSkillNegated(textToCheck, term)) {
             unverifiedClaims++;
             failures.push(`Affirmatively claimed unlisted skill/cert: "${term}"`);
         }
@@ -392,9 +400,10 @@ export function evaluateEvalCase(
             }
         }
         if (exp.forbiddenRepeatSubstrings) {
+            const questionSentences = msg.split(/(?<=[.!?])\s+/).filter((s) => s.includes('?')).join(' ') || msg;
             for (const sub of exp.forbiddenRepeatSubstrings) {
                 totalClaims++;
-                if (msg.toLowerCase().includes(sub.toLowerCase())) {
+                if (questionSentences.toLowerCase().includes(sub.toLowerCase())) {
                     unverifiedClaims++;
                     failures.push(`Repeated previous interview topic: "${sub}"`);
                 }

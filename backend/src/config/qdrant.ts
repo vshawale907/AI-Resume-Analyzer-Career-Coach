@@ -14,6 +14,7 @@ export const qdrantClient = new QdrantClient({
 export const COLLECTION = {
     JOBS: 'jobs',
     RESUMES: 'resumes',
+    RESUME_CHUNKS: 'resume_chunks',
 } as const;
 
 // text-embedding-3-small → 1536 dims
